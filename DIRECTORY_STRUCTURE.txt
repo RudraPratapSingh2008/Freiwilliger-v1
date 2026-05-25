@@ -1,0 +1,202 @@
+Freiwilliger MERN Stack — Complete Project Structure
+======================================================
+
+freiwilliger/
+├── README.md                    # Main project documentation
+├── SETUP.md                     # Quick start guide
+├── PROJECT_CHECKLIST.md         # Implementation checklist
+├── DIRECTORY_STRUCTURE.txt      # This file
+├── .gitignore                   # Root .gitignore
+│
+├── client/                      # React Frontend (Vite)
+│   ├── .env.example             # Environment variables template
+│   ├── .gitignore
+│   ├── index.html               # HTML entry point
+│   ├── package.json             # Dependencies & scripts
+│   ├── package-lock.json        # Locked versions
+│   ├── vite.config.js           # Vite with API proxy
+│   ├── tailwind.config.js       # Tailwind CSS configuration
+│   ├── postcss.config.js        # PostCSS with Tailwind
+│   ├── dist/                    # Production build output
+│   ├── node_modules/            # Client dependencies
+│   │
+│   └── src/
+│       ├── index.css            # Global styles + Tailwind
+│       ├── main.jsx             # App entry with Redux Provider
+│       ├── vite-env.d.ts        # Vite type definitions
+│       ├── App.jsx              # Main App with React Router
+│       │
+│       ├── app/
+│       │   └── store.js         # Redux store configuration
+│       │
+│       ├── features/
+│       │   └── auth/
+│       │       └── authSlice.js # Redux auth slice
+│       │                        # TO ADD: LoginPage, RegisterPage, etc.
+│       │
+│       └── lib/
+│           ├── axios.js         # Axios with interceptors & token refresh
+│           └── socket.js        # Socket.io client with auto-reconnect
+│                                # TO ADD: Firebase config, hooks, etc.
+│
+├── server/                      # Express Backend (Node.js)
+│   ├── .env.example             # Environment variables template
+│   ├── .gitignore
+│   ├── package.json             # Dependencies & scripts
+│   ├── package-lock.json        # Locked versions
+│   ├── server.js                # HTTP + Socket.io server entry
+│   ├── node_modules/            # Server dependencies
+│   │
+│   └── src/
+│       ├── app.js               # Express app with middleware
+│       │                        # Helmet, CORS, rate limit, morgan
+│       │
+│       ├── config/
+│       │   └── db.js            # MongoDB connection with Mongoose
+│       │                        # TO ADD: Firebase admin, Cloudinary
+│       │
+│       ├── routes/
+│       │   ├── auth.routes.js   # Auth endpoints (placeholder)
+│       │   ├── users.routes.js  # User profile endpoints
+│       │   ├── events.routes.js # Event management endpoints
+│       │   ├── reviews.routes.js # Review endpoints
+│       │   ├── messages.routes.js # Messaging endpoints
+│       │   └── network.routes.js # Network endpoints
+│       │
+│       ├── models/              # TO ADD: Mongoose schemas
+│       │   ├── User.model.js
+│       │   ├── Event.model.js
+│       │   ├── Conversation.model.js
+│       │   ├── Message.model.js
+│       │   ├── Review.model.js
+│       │   ├── OtpToken.model.js
+│       │   └── ContactRequest.model.js
+│       │
+│       ├── controllers/         # TO ADD: Route handlers
+│       │   ├── auth.controller.js
+│       │   ├── user.controller.js
+│       │   ├── event.controller.js
+│       │   ├── review.controller.js
+│       │   ├── message.controller.js
+│       │   ├── network.controller.js
+│       │   └── settings.controller.js
+│       │
+│       ├── middleware/          # TO ADD: Custom middleware
+│       │   ├── auth.middleware.js      # JWT verification
+│       │   ├── role.middleware.js      # Role-based access
+│       │   ├── upload.middleware.js    # File uploads
+│       │   └── profileFilter.middleware.js # Profile visibility
+│       │
+│       ├── services/            # TO ADD: Business logic
+│       │   ├── phone.service.js       # Firebase phone verification
+│       │   ├── geo.service.js         # Geolocation & reverse geocoding
+│       │   ├── notification.service.js # Real-time notifications
+│       │   └── score.service.js       # Scoring system
+│       │
+│       ├── utils/               # TO ADD: Helper utilities
+│       │   ├── apiResponse.utils.js    # Standard response format
+│       │   ├── hash.utils.js           # Password & OTP hashing
+│       │   ├── jwt.utils.js            # Token generation
+│       │   └── scoreTier.utils.js      # Score tier calculations
+│       │
+│       ├── jobs/                # TO ADD: Scheduled jobs
+│       │   └── scoreUpdater.job.js    # Daily score update cron
+│       │
+│       └── config/              # TO ADD: External services
+│           ├── socket.js        # Socket.io namespace setup
+│           ├── firebase.admin.js # Firebase Admin SDK
+│           └── cloudinary.js    # Cloudinary configuration
+
+================================================================================
+
+CURRENT STATUS: Foundation Phase ✅
+
+✅ ALL COMPLETED:
+  • Project structure (monorepo)
+  • Client setup (React + Vite + Tailwind)
+  • Server setup (Express + MongoDB ready)
+  • Redux store configured
+  • Axios with interceptors
+  • Socket.io initialized
+  • All dependencies installed
+  • Production build working
+
+🚀 READY FOR:
+  • npm run dev (both client & server)
+  • Building for production
+  • Setting up external services
+  • Implementing database models
+  • Creating API endpoints
+
+================================================================================
+
+KEY CONFIGURATIONS:
+
+CLIENT ROUTING:
+  / → HomePage
+  /login → LoginPage
+  /register → RegisterPage
+  /dashboard → DashboardPage
+  /settings → SettingsPage
+
+API BASE URL:
+  Client: http://localhost:5000/api/v1
+  Proxy configured in vite.config.js
+
+SOCKET.IO:
+  Server: http://localhost:5000
+  Client connection on auth with JWT token
+  Personal room: user:{userId}
+
+REDUX STATE:
+  auth.user → Current logged-in user
+  auth.accessToken → JWT access token
+  auth.isAuthenticated → Login status
+  auth.loading → API loading state
+  auth.error → Error message
+
+AXIOS INTERCEPTORS:
+  Request: Adds Authorization: Bearer {token}
+  Response: Auto-refresh on 401 status
+
+================================================================================
+
+NEXT PHASE CHECKLIST (Week 1, Days 2-5):
+
+Day 2: External Services
+  [ ] Create MongoDB Atlas cluster
+  [ ] Create Firebase project with phone auth
+  [ ] Create Cloudinary account
+  [ ] Generate Gmail app password
+  [ ] Update .env files
+
+Day 3-4: Database Models
+  [ ] User model
+  [ ] Event model
+  [ ] Conversation & Message models
+  [ ] Review model
+  [ ] OtpToken model
+
+Day 5: Utility Files
+  [ ] API response utilities
+  [ ] Hash utilities (bcrypt)
+  [ ] JWT utilities
+  [ ] Phone service
+  [ ] Geo service
+
+Week 2-10: Core Features
+  [ ] Authentication system
+  [ ] Event discovery & management
+  [ ] Real-time messaging
+  [ ] Reviews & scoring
+  [ ] Contact requests
+  [ ] Network management
+  [ ] Settings & preferences
+
+================================================================================
+
+For detailed instructions, see:
+  • README.md — Architecture & tech stack
+  • SETUP.md — Quick start guide
+  • PROJECT_CHECKLIST.md — Complete checklist
+
