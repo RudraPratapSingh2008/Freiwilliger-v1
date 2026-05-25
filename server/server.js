@@ -3,10 +3,15 @@ require('dotenv').config()
 const http = require('http')
 const { Server } = require('socket.io')
 const app = require('./src/app')
-const connectDB = require('./src/config/db')
+const mongoose = require('mongoose')
+require('./src/models/User.model')
+require('./src/models/Event.model')
 
-// Connect to MongoDB
-connectDB()
+// Connect to MongoDB (temporary test logging)
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => console.log('✅ MongoDB connected'))
+  .catch((err) => console.error('❌ MongoDB error:', err))
 
 // Create HTTP server
 const httpServer = http.createServer(app)
