@@ -7,11 +7,17 @@ const mongoose = require('mongoose')
 require('./src/models/User.model')
 require('./src/models/Event.model')
 
-// Connect to MongoDB (temporary test logging)
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ MongoDB connected'))
-  .catch((err) => console.error('❌ MongoDB error:', err))
+
+const Conversation = require('./src/models/Conversation.model');
+const Message      = require('./src/models/Message.model');
+const Review       = require('./src/models/Review.model');
+const OtpToken     = require('./src/models/OtpToken.model');
+
+// // Connect to MongoDB (temporary test logging)
+// mongoose
+//   .connect(process.env.MONGODB_URI)
+//   .then(() => console.log('✅ MongoDB connected'))
+//   .catch((err) => console.error('❌ MongoDB error:', err))
 
 // Create HTTP server
 const httpServer = http.createServer(app)
