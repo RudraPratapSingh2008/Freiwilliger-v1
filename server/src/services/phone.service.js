@@ -1,6 +1,6 @@
 const admin = require("../config/firebase.admin");
 const nodemailer = require("nodemailer");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 
 // In a real application, you would interact with a database for OTP storage
 const otpStore = {}; // { email: { otpHash, expiresAt, purpose } }
