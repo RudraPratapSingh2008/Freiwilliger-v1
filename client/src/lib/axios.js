@@ -1,56 +1,92 @@
-import axios from 'axios'
-import store from '../app/store'
-import { setCredentials, logout } from '../features/auth/authSlice'
+import axios from 'axios';
+import store from '../app/store';
+import { setCredentials, logout } from '../features/auth/authSlice';
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-})
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
 
-api.interceptors.request.use(
-  (config) => {
-    const state = store.getState()
-    const accessToken = state.auth.accessToken
-
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`
-    }
-
-    return config
+export const axiosInstance = axios.create({
+  baseURL: API_URL,
+  withCredentials: true, // needed so the httpOnly refreshToken cookie is sent
+  headers: {
+    'Content-Type': 'application/json',
   },
-  (error) => {
-    return Promise.reject(error)
-  }
-)
+});
 
-api.interceptors.response.use(
+// Queue of requests that failed while a refresh was already in-flight
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  isRefreshing = false;
+  failedQueue = [];
+};
+
+// Request interceptor — attach access token from Redux store
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const state = store.getState();
+    const token = state.auth.accessToken;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor — on 401 call our own refresh endpoint, retry, or logout
+axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config
+    const originalRequest = error.config;
 
+    // Only intercept 401s that haven't been retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true
+
+      // If a refresh is already running, queue this request until it resolves
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({
+            resolve: (token) => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              resolve(axiosInstance(originalRequest));
+            },
+            reject: (err) => reject(err),
+          });
+        });
+      }
+
+      isRefreshing = true;
+      originalRequest._retry = true;
 
       try {
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/auth/refresh-token`,
-          {},
-          { withCredentials: true }
-        )
+        // Call our own backend — the httpOnly cookie carries the refresh token
+        const response = await axiosInstance.post('/auth/refresh-token');
+        const { accessToken, user } = response.data.data;
 
-        const { accessToken, user } = response.data.data
-        store.dispatch(setCredentials({ user, accessToken }))
+        store.dispatch(setCredentials({ user, accessToken }));
 
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`
-        return api(originalRequest)
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        processQueue(null, accessToken);
+
+        return axiosInstance(originalRequest);
       } catch (refreshError) {
-        store.dispatch(logout())
-        window.location.href = '/login'
-        return Promise.reject(refreshError)
+        processQueue(refreshError, null);
+        store.dispatch(logout());
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
       }
     }
 
-    return Promise.reject(error)
+    return Promise.reject(error);
   }
-)
+);
 
-export default api
+export default axiosInstance;
