@@ -8,6 +8,7 @@ const cookieParser = require('cookie-parser')
 
 require('dotenv').config({ path: path.resolve(__dirname, '.env') })
 
+const connectDB = require('./src/config/db')
 const authRoutes = require('./src/routes/auth.routes')
 
 const app = express()
@@ -82,8 +83,17 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000
 
-app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`)
+const startServer = async () => {
+  await connectDB()
+
+  app.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`)
+  })
+}
+
+startServer().catch((error) => {
+  console.error('❌ Server startup failed:', error)
+  process.exit(1)
 })
 
 module.exports = app
