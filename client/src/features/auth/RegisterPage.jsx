@@ -307,8 +307,8 @@ export default function RegisterPage() {
       // Clear stored token
       sessionStorage.removeItem('firebaseIdToken');
       
-      // Navigate to role selection or dashboard
-      navigate('/role-selection');
+      // Route exists in current app setup; keep user in authenticated area
+      navigate('/dashboard');
     } catch (err) {
       console.error('[Freiwilliger] Registration error:', err);
       setLocalError(err.data?.message || 'Registration failed. Please try again.');

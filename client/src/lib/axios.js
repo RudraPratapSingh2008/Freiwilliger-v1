@@ -69,7 +69,12 @@ axiosInstance.interceptors.response.use(
       try {
         // Call our own backend — the httpOnly cookie carries the refresh token
         const response = await axiosInstance.post('/auth/refresh-token');
-        const { accessToken, user } = response.data.data;
+        const payload = response.data?.data || response.data;
+        const { accessToken, user } = payload || {};
+
+        if (!accessToken || !user) {
+          throw new Error('Refresh token response is missing accessToken or user.');
+        }
 
         store.dispatch(setCredentials({ user, accessToken }));
 

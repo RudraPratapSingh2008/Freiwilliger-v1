@@ -291,7 +291,7 @@ const refreshToken = async (req, res) => {
     const user = await User.findOne({
       _id: decoded._id,
       refreshTokens: tokenHash,
-    });
+    }).select('+refreshTokens');
 
     if (!user) {
       // Token not in DB — possible reuse attack; clear cookie
