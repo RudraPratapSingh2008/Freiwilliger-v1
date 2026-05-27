@@ -210,6 +210,7 @@ const completeRegistration = async (req, res) => {
       username: username.toLowerCase(),
       password,
       role,
+      isPhoneVerified: true,
     });
 
     const tokenData = await issueTokens(newUser, res);
