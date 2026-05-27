@@ -11,7 +11,10 @@ const {
   refreshToken,
   logout,
   forgotPassword,
+  setRole,
 } = require('../controllers/auth.controller');
+
+const { verifyToken } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
@@ -43,5 +46,6 @@ router.post('/login', loginLimiter, validateLogin, login);
 router.post('/refresh-token', refreshToken);
 router.post('/logout', logout);
 router.post('/forgot-password', validateForgotPassword, forgotPassword);
+router.patch('/set-role', verifyToken, setRole);
 
 module.exports = router;

@@ -39,6 +39,7 @@ const volunteerProfileSchema = new Schema(
     fullName:     { type: String, trim: true },
     email:        { type: String, trim: true, lowercase: true },
     isEmailVerified: { type: Boolean, default: false },
+    bio:          { type: String, trim: true },
     age:          { type: Number, min: 18 },
     gender:       {
       type: String,
@@ -64,6 +65,8 @@ const volunteerProfileSchema = new Schema(
         message: 'At least one skill is required.',
       },
     },
+
+    otherSkills: [{ type: String, trim: true }],
 
     languages: {
       type: [String],
@@ -108,7 +111,10 @@ const organiserProfileSchema = new Schema(
 
     // Individual fields (fullName lives here when entityType === 'individual')
     fullName:     { type: String, trim: true },
+    email:        { type: String, trim: true, lowercase: true },
     profilePhoto: { type: String, trim: true },
+
+    bio:          { type: String, trim: true },
 
     // Scoring
     hireScore:    { type: Number, default: 50, min: 0, max: 100 },
@@ -211,6 +217,8 @@ const userSchema = new Schema(
         connectedAt: { type: Date, default: Date.now },
       },
     ],
+
+    favouriteUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 
     isActive:  { type: Boolean, default: true },
     isBanned:  { type: Boolean, default: false },

@@ -384,6 +384,38 @@ const forgotPassword = async (req, res) => {
   }
 };
 
+/**
+ * PATCH /auth/set-role
+ * Body: { role: "volunteer" | "organiser" }
+ * Requires Bearer token.
+ */
+const setRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+
+    if (!['volunteer', 'organiser'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Role must be volunteer or organiser.',
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { role },
+      { new: true }
+    ).select('-password -refreshTokens');
+
+    return res.status(200).json({ success: true, user });
+  } catch (err) {
+    console.error('[setRole]', err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Failed to set role.',
+    });
+  }
+};
+
 // ─────────────────────────────────────────────
 // Exports
 // ─────────────────────────────────────────────
@@ -400,4 +432,5 @@ module.exports = {
   refreshToken,
   logout,
   forgotPassword,
+  setRole,
 };

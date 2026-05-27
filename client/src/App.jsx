@@ -6,12 +6,21 @@ import LoginPage from "./features/auth/LoginPage";
 import RegisterPage from "./features/auth/RegisterPage";
 import ForgotPassword from "./features/auth/ForgotPasswordPage";
 
+// ── Onboarding ───────────────────────────────────────────────────────────────
+import RoleSelection from "./features/onboarding/RoleSelection";
+
+// ── Profile ──────────────────────────────────────────────────────────────────
+import PublicProfile from "./features/profile/PublicProfile";
+import VolunteerProfileSetupPage from "./features/profile/VolunteerProfileSetupPage";
+import OrganiserProfileSetupPage from "./features/profile/OrganiserProfileSetupPage";
+
 // ── Route Guards ─────────────────────────────────────────────────────────────
 import { ProtectedRoute, RoleRoute } from "./components/routing/ProtectedRoute";
 
 // ── Placeholder pages (replace with real components as you build them) ───────
 // These are lightweight stubs so the router doesn't crash before
 // the real pages exist. Delete and import the real ones as you go.
+// TODO: Replace DashboardRouter/SettingsPage stubs with real components when available.
 function DashboardRouter() {
   return (
     <div className="min-h-screen flex items-center justify-center text-gray-700">
@@ -32,7 +41,10 @@ function SettingsPage() {
 // import RaiseRequirement from "./features/organiser/RaiseRequirement";
 
 export default function App() {
-  const { isAuthenticated } = useSelector((state) => state.auth);
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
+
+  // After registration, if role isn't set yet → force role selection
+  const needsRoleSelection = isAuthenticated && !user?.role;
 
   return (
     <BrowserRouter>
@@ -42,18 +54,18 @@ export default function App() {
         <Route
           path="/"
           element={
-            isAuthenticated
-              ? <Navigate to="/dashboard" replace />
-              : <Navigate to="/login"    replace />
+            !isAuthenticated   ? <Navigate to="/login"          replace /> :
+            needsRoleSelection ? <Navigate to="/role-selection" replace /> :
+                                 <Navigate to="/dashboard"      replace />
           }
         />
 
-        {/* ── Auth routes (public — redirect to /dashboard if already logged in) ── */}
+        {/* ── Auth routes (public — redirect if already logged in) ── */}
         <Route
           path="/login"
           element={
             isAuthenticated
-              ? <Navigate to="/dashboard" replace />
+              ? <Navigate to="/" replace />
               : <LoginPage />
           }
         />
@@ -61,7 +73,7 @@ export default function App() {
           path="/register"
           element={
             isAuthenticated
-              ? <Navigate to="/dashboard" replace />
+              ? <Navigate to="/" replace />
               : <RegisterPage />
           }
         />
@@ -69,15 +81,37 @@ export default function App() {
           path="/forgot-password"
           element={
             isAuthenticated
-              ? <Navigate to="/dashboard" replace />
+              ? <Navigate to="/" replace />
               : <ForgotPassword />
           }
         />
 
         {/* ── Protected routes (must be authenticated) ── */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard"   element={<DashboardRouter />} />
-          <Route path="/settings/*"  element={<SettingsPage />} />
+
+          {/* Role selection — shown once after register, skipped if role exists */}
+          <Route
+            path="/role-selection"
+            element={
+              user?.role
+                ? <Navigate to="/dashboard" replace />
+                : <RoleSelection />
+            }
+          />
+
+          <Route path="/dashboard"          element={<DashboardRouter />} />
+          <Route path="/settings/*"         element={<SettingsPage />} />
+
+          {/* Public profile — any logged-in user can view */}
+          <Route path="/profile/:username"  element={<PublicProfile />} />
+
+          {/* ── Profile setup routes ── */}
+          <Route element={<RoleRoute requiredRole="volunteer" />}>
+            <Route path="/profile-setup/volunteer" element={<VolunteerProfileSetupPage />} />
+          </Route>
+          <Route element={<RoleRoute requiredRole="organiser" />}>
+            <Route path="/profile-setup/organiser" element={<OrganiserProfileSetupPage />} />
+          </Route>
 
           {/* ── Organiser-only routes ── */}
           {/* Uncomment when RaiseRequirement is built (Day 23):

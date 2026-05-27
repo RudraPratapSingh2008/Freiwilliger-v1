@@ -4,18 +4,38 @@ const cors = require('cors')
 const rateLimit = require('express-rate-limit')
 const morgan = require('morgan')
 
+// Route imports
+const authRoutes = require('./routes/auth.routes')
+const userRoutes = require('./routes/user.routes')
+const profileRoutes = require('./routes/profile.routes')
+const eventRoutes = require('./routes/events.routes')
+const messageRoutes = require('./routes/messages.routes')
+const reviewRoutes = require('./routes/reviews.routes')
+const networkRoutes = require('./routes/network.routes')
+
 const app = express()
 
 // Security middleware
 app.use(helmet())
 
 // CORS configuration
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}))
+} ))
 
 // Rate limiting
 const limiter = rateLimit({
@@ -37,30 +57,16 @@ app.get('/api/v1/health', (req, res) => {
   res.json({ status: 'ok', message: 'Freiwilliger server is running' })
 })
 
-// API Routes (placeholder)
-app.use('/api/v1/auth', (req, res) => {
-  res.json({ message: 'Auth routes not yet implemented' })
-})
+// API Routes
+app.use('/api/v1/auth', authRoutes)
+app.use('/api/v1/users', userRoutes)
+app.use('/api/v1/profile', profileRoutes)
 
-app.use('/api/v1/users', (req, res) => {
-  res.json({ message: 'User routes not yet implemented' })
-})
-
-app.use('/api/v1/events', (req, res) => {
-  res.json({ message: 'Event routes not yet implemented' })
-})
-
-app.use('/api/v1/messages', (req, res) => {
-  res.json({ message: 'Message routes not yet implemented' })
-})
-
-app.use('/api/v1/reviews', (req, res) => {
-  res.json({ message: 'Review routes not yet implemented' })
-})
-
-app.use('/api/v1/network', (req, res) => {
-  res.json({ message: 'Network routes not yet implemented' })
-})
+// These routes currently use placeholders or are yet to be fully implemented in the build plan
+app.use('/api/v1/events', eventRoutes)
+app.use('/api/v1/messages', messageRoutes)
+app.use('/api/v1/reviews', reviewRoutes)
+app.use('/api/v1/network', networkRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

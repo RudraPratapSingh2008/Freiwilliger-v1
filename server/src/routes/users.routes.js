@@ -1,21 +1,31 @@
-const express = require('express')
 
-const router = express.Router()
+const express = require('express');
+const router = express.Router();
+const userController = require('../controllers/user.controller');
+const { verifyToken } = require('../middleware/auth.middleware');
+const { uploadProfilePhoto, uploadIdDocument } = require('../middleware/upload.middleware');
 
-router.get('/me', (req, res) => {
-  res.json({ message: 'Get user profile' })
-})
+// All routes require authentication
+router.use(verifyToken);
 
-router.patch('/me', (req, res) => {
-  res.json({ message: 'Update user profile' })
-})
+// Private profile routes
+router.get('/me', userController.getMe);
+router.patch('/me', userController.updateMe);
+router.patch('/me/location', userController.updateLocation);
+router.patch('/me/volunteer-profile', userController.updateVolunteerProfile);
+router.patch('/me/organiser-profile', userController.updateOrganiserProfile);
 
-router.get('/search', (req, res) => {
-  res.json({ message: 'Search users' })
-})
+// Email verification routes
+router.post('/me/verify-email/send', userController.sendEmailVerification);
+router.post('/me/verify-email/confirm', userController.confirmEmailVerification);
 
-router.get('/:username', (req, res) => {
-  res.json({ message: 'Get public profile' })
-})
+// Upload routes (Actual upload logic integrated)
+router.post('/me/photo', uploadProfilePhoto, userController.uploadPhoto);
+router.post('/me/id-document', uploadIdDocument, userController.uploadIdDocument);
+router.post('/me/company-logo', uploadProfilePhoto, userController.uploadCompanyLogo);
 
-module.exports = router
+// Public profile routes
+router.get('/search', userController.searchUsers);
+router.get('/:username', userController.getUserByUsername);
+
+module.exports = router;

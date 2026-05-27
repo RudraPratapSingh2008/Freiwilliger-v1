@@ -1,0 +1,356 @@
+
+const User = require('../models/User.model');
+const { successResponse, errorResponse } = require('../utils/apiResponse.utils');
+const { filterProfileForViewer } = require('../middleware/profileFilter.middleware');
+const { sendEmailOtp, verifyEmailOtp } = require('../services/phone.service');
+
+/**
+ * GET /users/me
+ * Get current user's full profile
+ */
+exports.getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password -refreshTokens');
+    if (!user) {
+      return errorResponse(res, 'User not found', 404);
+    }
+    return successResponse(res, user, 'Profile retrieved successfully');
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+/**
+ * PATCH /users/me
+ * Update current user's profile
+ */
+exports.updateMe = async (req, res) => {
+  try {
+    const updates = req.body;
+    // Prevent updating sensitive fields
+    delete updates.password;
+    delete updates.role;
+    delete updates.phone;
+    delete updates.email;
+    delete updates.isEmailVerified;
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-password -refreshTokens');
+
+    return successResponse(res, user, 'Profile updated successfully');
+  } catch (error) {
+    return errorResponse(res, error.message, 400);
+  }
+};
+
+/**
+ * PATCH /users/me/volunteer-profile
+ * Update volunteer profile data
+ */
+exports.updateVolunteerProfile = async (req, res) => {
+  try {
+    const {
+      fullName,
+      email,
+      age,
+      gender,
+      qualification,
+      occupation,
+      street,
+      city,
+      state,
+      pincode,
+      skills = [],
+      otherSkills = [],
+      languages = [],
+      pastExperiences = [],
+      bio,
+    } = req.body;
+
+    const genderMap = {
+      male: 'Male',
+      female: 'Female',
+      other: 'Other',
+      'prefer not to say': 'Prefer not to say',
+    };
+
+    const normalizedGender = gender ? (genderMap[gender] || gender) : undefined;
+
+    const pastExperience = Array.isArray(pastExperiences)
+      ? pastExperiences.map((exp) => ({
+          organisationName: exp.organisation || exp.organisationName || '',
+          role: exp.role || '',
+          duration: exp.duration || '',
+        }))
+      : [];
+
+    const update = {
+      'volunteerProfile.fullName': fullName,
+      'volunteerProfile.email': email,
+      'volunteerProfile.age': age,
+      'volunteerProfile.gender': normalizedGender,
+      'volunteerProfile.qualification': qualification,
+      'volunteerProfile.occupation': occupation,
+      'volunteerProfile.address.street': street,
+      'volunteerProfile.address.city': city,
+      'volunteerProfile.address.state': state,
+      'volunteerProfile.address.pincode': pincode,
+      'volunteerProfile.skills': Array.isArray(skills) ? skills : [],
+      'volunteerProfile.otherSkills': Array.isArray(otherSkills) ? otherSkills : [],
+      'volunteerProfile.languages': Array.isArray(languages) ? languages : [],
+      'volunteerProfile.pastExperience': pastExperience,
+      'volunteerProfile.bio': bio,
+      'volunteerProfile.isProfileComplete': true,
+    };
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: update },
+      { new: true, runValidators: true }
+    ).select('-password -refreshTokens');
+
+    return successResponse(res, user, 'Volunteer profile updated successfully');
+  } catch (error) {
+    return errorResponse(res, error.message, 400);
+  }
+};
+
+/**
+ * PATCH /users/me/organiser-profile
+ * Update organiser profile data
+ */
+exports.updateOrganiserProfile = async (req, res) => {
+  try {
+    const {
+      entityType,
+      companyName,
+      companyEmail,
+      companyPhone,
+      gstNumber,
+      websiteUrl,
+      fullName,
+      email,
+      bio,
+    } = req.body;
+
+    const update = {
+      'organiserProfile.entityType': entityType,
+      'organiserProfile.companyName': companyName,
+      'organiserProfile.companyEmail': companyEmail,
+      'organiserProfile.companyPhone': companyPhone,
+      'organiserProfile.gstNumber': gstNumber,
+      'organiserProfile.website': websiteUrl,
+      'organiserProfile.fullName': fullName,
+      'organiserProfile.email': email,
+      'organiserProfile.bio': bio,
+      'organiserProfile.isProfileComplete': true,
+    };
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: update },
+      { new: true, runValidators: true }
+    ).select('-password -refreshTokens');
+
+    return successResponse(res, user, 'Organiser profile updated successfully');
+  } catch (error) {
+    return errorResponse(res, error.message, 400);
+  }
+};
+
+/**
+ * POST /users/me/photo
+ * Actual upload logic integrated via middleware in routes
+ */
+exports.uploadPhoto = async (req, res) => {
+  try {
+    if (!req.fileUrl) {
+      return errorResponse(res, 'File upload failed', 400);
+    }
+
+    const update = req.user.role === 'organiser'
+      ? { 'organiserProfile.profilePhoto': req.fileUrl }
+      : { 'volunteerProfile.profilePhoto': req.fileUrl };
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: update },
+      { new: true }
+    ).select('role volunteerProfile.profilePhoto organiserProfile.profilePhoto');
+
+    return successResponse(res, user, 'Photo uploaded successfully');
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+/**
+ * POST /users/me/id-document
+ * Actual upload logic integrated via middleware in routes
+ */
+exports.uploadIdDocument = async (req, res) => {
+  try {
+    if (!req.fileUrl) {
+      return errorResponse(res, 'File upload failed', 400);
+    }
+
+    if (req.user.role !== 'volunteer') {
+      return errorResponse(res, 'ID document upload is only for volunteers', 403);
+    }
+
+    await User.findByIdAndUpdate(req.user._id, {
+      $set: {
+        'volunteerProfile.idDocument': req.fileUrl,
+        'volunteerProfile.isProfileComplete': true,
+      },
+    });
+
+    return successResponse(res, null, 'ID document uploaded and pending verification');
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+/**
+ * POST /users/me/company-logo
+ * Upload organiser company logo
+ */
+exports.uploadCompanyLogo = async (req, res) => {
+  try {
+    if (!req.fileUrl) {
+      return errorResponse(res, 'File upload failed', 400);
+    }
+
+    if (req.user.role !== 'organiser') {
+      return errorResponse(res, 'Company logo upload is only for organisers', 403);
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { 'organiserProfile.logo': req.fileUrl } },
+      { new: true }
+    ).select('organiserProfile.logo');
+
+    return successResponse(res, user, 'Company logo uploaded successfully');
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+/**
+ * POST /users/me/verify-email/send
+ * Send OTP to user's email
+ */
+exports.sendEmailVerification = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const email = req.body.email || user.email;
+
+    if (!email) {
+      return errorResponse(res, 'Email address is required', 400);
+    }
+
+    await sendEmailOtp(email, 'email_verification');
+    return successResponse(res, null, `Verification OTP sent to ${email}`);
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+/**
+ * POST /users/me/verify-email/confirm
+ * Verify OTP and mark email as verified
+ */
+exports.confirmEmailVerification = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return errorResponse(res, 'Email and OTP are required', 400);
+    }
+
+    await verifyEmailOtp(email, otp, 'email_verification');
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { email, isEmailVerified: true },
+      { new: true }
+    ).select('email isEmailVerified');
+
+    return successResponse(res, user, 'Email verified successfully');
+  } catch (error) {
+    return errorResponse(res, error.message, 400);
+  }
+};
+
+/**
+ * PATCH /users/me/location
+ * Update user's lat/lng and city
+ */
+exports.updateLocation = async (req, res) => {
+  try {
+    const { lat, lng, city, state } = req.body;
+    if (!lat || !lng) {
+      return errorResponse(res, 'Coordinates are required', 400);
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { 
+        location: { type: 'Point', coordinates: [lng, lat] },
+        city,
+        state
+      },
+      { new: true }
+    ).select('location city state');
+
+    return successResponse(res, user, 'Location updated successfully');
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+/**
+ * GET /users/:username
+ * Get public profile of a user
+ */
+exports.getUserByUsername = async (req, res) => {
+  try {
+    const targetUser = await User.findOne({ username: req.params.username });
+    if (!targetUser) {
+      return errorResponse(res, 'User not found', 404);
+    }
+
+    const filteredProfile = filterProfileForViewer(targetUser, req.user.role);
+    return successResponse(res, filteredProfile, 'Public profile retrieved');
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+/**
+ * GET /users/search
+ * Search users by username or name
+ */
+exports.searchUsers = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return successResponse(res, [], 'Empty search');
+
+    const users = await User.find({
+      $or: [
+        { username: { $regex: q, $options: 'i' } },
+        { 'volunteerProfile.fullName': { $regex: q, $options: 'i' } },
+        { 'organiserProfile.companyName': { $regex: q, $options: 'i' } },
+        { 'organiserProfile.fullName': { $regex: q, $options: 'i' } }
+      ]
+    }).limit(20);
+
+    const filteredUsers = users.map(u => filterProfileForViewer(u, req.user.role));
+    return successResponse(res, filteredUsers, 'Search results');
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};

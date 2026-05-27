@@ -1,25 +1,17 @@
-const express = require('express')
+const express = require('express');
+const { verifyToken } = require('../middleware/auth.middleware');
+const {
+  requestConnection,
+  removeConnection,
+  getNetwork,
+} = require('../controllers/network.controller');
 
-const router = express.Router()
+const router = express.Router();
 
-router.post('/:userId', (req, res) => {
-  res.json({ message: 'Add to network' })
-})
+router.use(verifyToken);
 
-router.delete('/:userId', (req, res) => {
-  res.json({ message: 'Remove from network' })
-})
+router.post('/request/:userId', requestConnection);
+router.delete('/:userId', removeConnection);
+router.get('/', getNetwork);
 
-router.get('/', (req, res) => {
-  res.json({ message: 'Get network' })
-})
-
-router.post('/favourites/:userId', (req, res) => {
-  res.json({ message: 'Add to favourites' })
-})
-
-router.delete('/favourites/:userId', (req, res) => {
-  res.json({ message: 'Remove from favourites' })
-})
-
-module.exports = router
+module.exports = router;
