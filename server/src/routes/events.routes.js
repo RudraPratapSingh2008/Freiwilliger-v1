@@ -1,29 +1,40 @@
-const express = require('express')
 
-const router = express.Router()
+const express = require('express');
+const { body } = require('express-validator');
+const { verifyToken } = require('../middleware/auth.middleware');
+const { requireOrganiser, requireVolunteer } = require('../middleware/role.middleware');
+const eventController = require('../controllers/event.controller');
 
-router.get('/feed', (req, res) => {
-  res.json({ message: 'Get event feed' })
-})
+const router = express.Router();
 
-router.post('/', (req, res) => {
-  res.json({ message: 'Create event' })
-})
+// Validation rules
+const validateEventCreation = [
+  body('eventName').trim().notEmpty().withMessage('Event name is required').isLength({ max: 120 }),
+  body('description').trim().notEmpty().withMessage('Description is required').isLength({ max: 2000 }),
+  body('category').notEmpty().withMessage('Category is required'),
+  body('location.coordinates').isArray({ min: 2, max: 2 }).withMessage('Valid coordinates are required'),
+  body('dateTime.start').isISO8601().withMessage('Valid start date is required'),
+  body('dateTime.end').isISO8601().withMessage('Valid end date is required'),
+  body('totalVolunteersNeeded').isInt({ min: 1 }).withMessage('Total volunteers needed must be at least 1'),
+];
 
-router.get('/:id', (req, res) => {
-  res.json({ message: 'Get event details' })
-})
+// Public / Authenticated Feed
+router.get('/feed', eventController.getEventFeed);
 
-router.post('/:id/apply', (req, res) => {
-  res.json({ message: 'Apply to event' })
-})
+// Protected Routes
+router.use(verifyToken);
 
-router.delete('/:id/apply', (req, res) => {
-  res.json({ message: 'Withdraw application' })
-})
+// Event CRUD
+router.post('/', requireOrganiser, validateEventCreation, eventController.createEvent);
+router.get('/:id', eventController.getEventById);
 
-router.patch('/:id/applicants/:userId', (req, res) => {
-  res.json({ message: 'Manage applicant' })
-})
+// Applications
+router.post('/:id/apply', requireVolunteer, eventController.applyToEvent);
 
-module.exports = router
+// Applicant Management (Organiser)
+router.patch('/:id/applicants/:userId', requireOrganiser, eventController.respondToApplicant);
+
+// Attendance (Organiser)
+router.post('/:id/mark-attendance', requireOrganiser, eventController.markAttendance);
+
+module.exports = router;
