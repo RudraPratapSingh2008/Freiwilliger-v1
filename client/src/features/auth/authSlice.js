@@ -6,6 +6,7 @@ const initialState = {
   isAuthenticated: false,
   loading: false,
   error: null,
+  location: { lat: null, lng: null, city: null, state: null },
 };
 
 const authSlice = createSlice({
@@ -32,9 +33,7 @@ const authSlice = createSlice({
     },
     setLocation: (state, action) => {
       // payload: { lat, lng, city, state }
-      if (state.user) {
-        state.user.location = action.payload;
-      }
+      state.location = action.payload;
     },
     logout: (state) => {
       state.user = null;
