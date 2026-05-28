@@ -4,6 +4,7 @@ const { body } = require('express-validator');
 const { verifyToken } = require('../middleware/auth.middleware');
 const { requireOrganiser, requireVolunteer } = require('../middleware/role.middleware');
 const eventController = require('../controllers/event.controller');
+const applicationController = require('../controllers/application.controller');
 
 const router = express.Router();
 
@@ -29,10 +30,12 @@ router.post('/', requireOrganiser, validateEventCreation, eventController.create
 router.get('/:id', eventController.getEventById);
 
 // Applications
-router.post('/:id/apply', requireVolunteer, eventController.applyToEvent);
+router.post('/:id/apply', requireVolunteer, applicationController.applyToEvent);
+router.delete('/:id/apply', requireVolunteer, applicationController.withdrawApplication);
 
 // Applicant Management (Organiser)
-router.patch('/:id/applicants/:userId', requireOrganiser, eventController.respondToApplicant);
+router.get('/:id/applicants', requireOrganiser, applicationController.getApplicants);
+router.patch('/:id/applicants/:userId', requireOrganiser, applicationController.respondToApplicant);
 
 // Attendance (Organiser)
 router.post('/:id/mark-attendance', requireOrganiser, eventController.markAttendance);

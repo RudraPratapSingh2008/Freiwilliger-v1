@@ -8,10 +8,14 @@ const cookieParser = require('cookie-parser')
 
 require('dotenv').config({ path: path.resolve(__dirname, '.env') })
 
+const http = require('http');
 const connectDB = require('./src/config/db')
 const authRoutes = require('./src/routes/auth.routes')
+const { initSocket } = require('./src/services/socket.service');
 
 const app = express()
+const server = http.createServer(app);
+initSocket(server);
 
 // Security middleware
 app.use(helmet())
@@ -86,7 +90,7 @@ const PORT = process.env.PORT || 5000
 const startServer = async () => {
   await connectDB()
 
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`)
   })
 }

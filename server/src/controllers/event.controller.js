@@ -103,87 +103,7 @@ const getEventById = async (req, res) => {
   }
 };
 
-/**
- * POST /events/:id/apply
- */
-const applyToEvent = async (req, res) => {
-  try {
-    const event = await Event.findById(req.params.id);
-    if (!event) return errorResponse(res, 'Event not found', 404);
 
-    const alreadyApplied = event.applications.some(
-      (app) => app.volunteerId.toString() === req.user._id.toString()
-    );
-
-    if (alreadyApplied) {
-      return errorResponse(res, 'You have already applied for this event', 400);
-    }
-
-    event.applications.push({
-      volunteerId: req.user._id,
-      status: 'pending',
-    });
-
-    await event.save();
-
-    // TODO: Trigger notification to organiser via socket.io
-
-    return successResponse(res, null, 'Application submitted successfully');
-  } catch (error) {
-    return errorResponse(res, error.message, 500);
-  }
-};
-
-/**
- * PATCH /events/:id/applicants/:userId
- * select/reject, triggers notification
- */
-const respondToApplicant = async (req, res) => {
-  try {
-    const { action } = req.body; // select, reject, shortlist
-    const { id: eventId, userId } = req.params;
-
-    const event = await Event.findById(eventId);
-    if (!event) return errorResponse(res, 'Event not found', 404);
-
-    if (event.organiserId.toString() !== req.user._id.toString()) {
-      return errorResponse(res, 'Not authorized', 403);
-    }
-
-    const application = event.applications.find(
-      (app) => app.volunteerId.toString() === userId
-    );
-
-    if (!application) {
-      return errorResponse(res, 'Application not found', 404);
-    }
-
-    application.status = action === 'select' ? 'selected' : action === 'reject' ? 'rejected' : 'shortlisted';
-    
-    if (action === 'select') {
-      if (!event.selectedVolunteers.includes(userId)) {
-        event.selectedVolunteers.push(userId);
-        
-        // Add volunteer to group chat
-        if (event.groupChatId) {
-          await Conversation.findByIdAndUpdate(event.groupChatId, {
-            $addToSet: { participants: userId }
-          });
-        }
-      }
-    } else {
-      event.selectedVolunteers = event.selectedVolunteers.filter(v => v.toString() !== userId);
-    }
-
-    await event.save();
-
-    // TODO: Trigger notification to volunteer via socket.io
-
-    return successResponse(res, null, `Applicant ${action}ed successfully`);
-  } catch (error) {
-    return errorResponse(res, error.message, 500);
-  }
-};
 
 /**
  * POST /events/:id/mark-attendance
@@ -227,7 +147,6 @@ module.exports = {
   getEventFeed,
   createEvent,
   getEventById,
-  applyToEvent,
-  respondToApplicant,
+
   markAttendance,
 };
