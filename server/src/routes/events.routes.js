@@ -1,43 +1,93 @@
-
-const express = require('express');
-const { body } = require('express-validator');
-const { verifyToken } = require('../middleware/auth.middleware');
-const { requireOrganiser, requireVolunteer } = require('../middleware/role.middleware');
-const eventController = require('../controllers/event.controller');
-const applicationController = require('../controllers/application.controller');
+const express = require("express");
+const { body, param } = require("express-validator");
+const { verifyToken } = require("../middleware/auth.middleware");
+const { requireOrganiser, requireVolunteer } = require("../middleware/role.middleware");
+const { getEventFeed, createEvent, manageApplicant, markAttendance } = require("../controllers/event.controller");
 
 const router = express.Router();
 
-// Validation rules
-const validateEventCreation = [
-  body('eventName').trim().notEmpty().withMessage('Event name is required').isLength({ max: 120 }),
-  body('description').trim().notEmpty().withMessage('Description is required').isLength({ max: 2000 }),
-  body('category').notEmpty().withMessage('Category is required'),
-  body('location.coordinates').isArray({ min: 2, max: 2 }).withMessage('Valid coordinates are required'),
-  body('dateTime.start').isISO8601().withMessage('Valid start date is required'),
-  body('dateTime.end').isISO8601().withMessage('Valid end date is required'),
-  body('totalVolunteersNeeded').isInt({ min: 1 }).withMessage('Total volunteers needed must be at least 1'),
+// Validation for event creation
+const validateCreateEvent = [
+  body("eventName").trim().notEmpty().withMessage("Event name is required.").isLength({ max: 120 }).withMessage("Event name cannot exceed 120 characters."),
+  body("description").trim().notEmpty().withMessage("Description is required.").isLength({ max: 2000 }).withMessage("Description cannot exceed 2000 characters."),
+  body("category").notEmpty().withMessage("Category is required.").isIn([
+    "Conference", "Festival", "Sports", "Community Service",
+    "Education", "Healthcare", "Environment", "Corporate",
+    "Cultural", "Religious", "Fundraiser", "Other",
+  ]).withMessage("Invalid event category."),
+  body("location.lat").isFloat().withMessage("Latitude must be a number."),
+  body("location.lng").isFloat().withMessage("Longitude must be a number."),
+  body("location.address").trim().notEmpty().withMessage("Address is required."),
+  body("location.city").trim().notEmpty().withMessage("City is required."),
+  body("location.state").trim().notEmpty().withMessage("State is required."),
+  body("location.pincode").trim().notEmpty().withMessage("Pincode is required.").isLength({ min: 6, max: 6 }).withMessage("Pincode must be 6 digits."),
+  body("dateTime.start").isISO8601().toDate().withMessage("Start date/time must be a valid ISO 8601 date."),
+  body("dateTime.end").isISO8601().toDate().withMessage("End date/time must be a valid ISO 8601 date.").custom((end, { req }) => {
+    if (new Date(end) <= new Date(req.body.dateTime.start)) {
+      throw new Error("End date/time must be after start date/time.");
+    }
+    return true;
+  }),
+  body("totalVolunteersNeeded").isInt({ min: 1 }).withMessage("Total volunteers needed must be at least 1."),
+  body("requirements.genderPreference").optional().isIn(["Male", "Female", "Any"]).withMessage("Invalid gender preference."),
+  body("requirements.requiredSkills").optional().isArray().withMessage("Required skills must be an array."),
+  body("requirements.minHelpScore").optional().isInt({ min: 0, max: 100 }).withMessage("Minimum help score must be between 0 and 100."),
+  body("requirements.minAge").optional().isInt({ min: 18 }).withMessage("Minimum age must be at least 18."),
+  body("requirements.maxAge").optional().isInt().withMessage("Maximum age must be a number.").custom((maxAge, { req }) => {
+    if (maxAge && req.body.requirements.minAge && maxAge < req.body.requirements.minAge) {
+      throw new Error("Maximum age cannot be less than minimum age.");
+    }
+    return true;
+  }),
+  body("compensation.paymentType").optional().isIn(["paid", "unpaid", "certificate", "stipend"]).withMessage("Invalid payment type."),
+  body("compensation.amount").optional().isFloat({ min: 0 }).withMessage("Compensation amount must be a non-negative number."),
 ];
 
-// Public / Authenticated Feed
-router.get('/feed', eventController.getEventFeed);
+// GET /events/feed - Public event feed
+router.get(
+  "/feed",
+  [
+    verifyToken,
+    body("lat").isFloat().withMessage("Latitude is required and must be a number."),
+    body("lng").isFloat().withMessage("Longitude is required and must be a number."),
+    body("radius").optional().isFloat({ min: 1, max: 200 }).withMessage("Radius must be a number between 1 and 200km."),
+  ],
+  getEventFeed
+);
 
-// Protected Routes
-router.use(verifyToken);
+// POST /events - Create event (Organiser only)
+router.post(
+  "/",
+  verifyToken,
+  requireOrganiser,
+  validateCreateEvent,
+  createEvent
+);
 
-// Event CRUD
-router.post('/', requireOrganiser, validateEventCreation, eventController.createEvent);
-router.get('/:id', eventController.getEventById);
+// PATCH /events/:id/applicants/:userId - Select/reject applicant (Organiser only)
+router.patch(
+  "/:id/applicants/:userId",
+  verifyToken,
+  requireOrganiser,
+  [
+    param("id").isMongoId().withMessage("Invalid event ID."),
+    param("userId").isMongoId().withMessage("Invalid user ID."),
+    body("action").isIn(["select", "reject"]).withMessage("Action must be \'select\' or \'reject\'."),
+  ],
+  manageApplicant
+);
 
-// Applications
-router.post('/:id/apply', requireVolunteer, applicationController.applyToEvent);
-router.delete('/:id/apply', requireVolunteer, applicationController.withdrawApplication);
-
-// Applicant Management (Organiser)
-router.get('/:id/applicants', requireOrganiser, applicationController.getApplicants);
-router.patch('/:id/applicants/:userId', requireOrganiser, applicationController.respondToApplicant);
-
-// Attendance (Organiser)
-router.post('/:id/mark-attendance', requireOrganiser, eventController.markAttendance);
+// POST /events/:id/mark-attendance - Mark attendance (Organiser only)
+router.post(
+  "/:id/mark-attendance",
+  verifyToken,
+  requireOrganiser,
+  [
+    param("id").isMongoId().withMessage("Invalid event ID."),
+    body("volunteerId").isMongoId().withMessage("Invalid volunteer ID."),
+    body("attended").isBoolean().withMessage("Attended status must be a boolean."),
+  ],
+  markAttendance
+);
 
 module.exports = router;
