@@ -2,7 +2,13 @@ const express = require("express");
 const { body, param } = require("express-validator");
 const { verifyToken } = require("../middleware/auth.middleware");
 const { requireOrganiser, requireVolunteer } = require("../middleware/role.middleware");
-const { getEventFeed, createEvent, manageApplicant, markAttendance } = require("../controllers/event.controller");
+const { getEventFeed, createEvent, markAttendance } = require("../controllers/event.controller");
+const {
+  applyToEvent,
+  withdrawApplication,
+  respondToApplicant,
+  getApplicants,
+} = require("../controllers/application.controller");
 
 const router = express.Router();
 
@@ -64,7 +70,34 @@ router.post(
   createEvent
 );
 
-// PATCH /events/:id/applicants/:userId - Select/reject applicant (Organiser only)
+// POST /events/:id/apply - Apply to an event (Volunteer only)
+router.post(
+  "/:id/apply",
+  verifyToken,
+  requireVolunteer,
+  [param("id").isMongoId().withMessage("Invalid event ID.")],
+  applyToEvent
+);
+
+// DELETE /events/:id/apply - Withdraw application (Volunteer only)
+router.delete(
+  "/:id/apply",
+  verifyToken,
+  requireVolunteer,
+  [param("id").isMongoId().withMessage("Invalid event ID.")],
+  withdrawApplication
+);
+
+// GET /events/:id/applicants - List applicants with skills-match info (Organiser only)
+router.get(
+  "/:id/applicants",
+  verifyToken,
+  requireOrganiser,
+  [param("id").isMongoId().withMessage("Invalid event ID.")],
+  getApplicants
+);
+
+// PATCH /events/:id/applicants/:userId - Select/reject/shortlist applicant (Organiser only)
 router.patch(
   "/:id/applicants/:userId",
   verifyToken,
@@ -72,9 +105,9 @@ router.patch(
   [
     param("id").isMongoId().withMessage("Invalid event ID."),
     param("userId").isMongoId().withMessage("Invalid user ID."),
-    body("action").isIn(["select", "reject"]).withMessage("Action must be \'select\' or \'reject\'."),
+    body("action").isIn(["select", "reject", "shortlist"]).withMessage("Action must be 'select', 'reject', or 'shortlist'."),
   ],
-  manageApplicant
+  respondToApplicant
 );
 
 // POST /events/:id/mark-attendance - Mark attendance (Organiser only)

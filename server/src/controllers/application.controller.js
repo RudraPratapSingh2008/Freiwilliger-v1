@@ -4,6 +4,19 @@ const Conversation = require('../models/Conversation.model');
 const { successResponse, errorResponse } = require('../utils/apiResponse.utils');
 const { emitNotification } = require('../services/socket.service');
 const { filterProfileForViewer, calcSkillsMatch } = require('../middleware/profileFilter.middleware');
+const { validationResult } = require('express-validator');
+
+// Creates the event's group chat the first time a volunteer is selected.
+const createEventGroupChat = async (eventId, organiserId, volunteerIds) => {
+  const conversation = new Conversation({
+    type: 'group',
+    event: eventId,
+    participants: [organiserId, ...volunteerIds],
+    name: `Event Chat: ${eventId}`,
+  });
+  await conversation.save();
+  return conversation._id;
+};
 
 /**
  * POST /events/:id/apply
@@ -13,6 +26,11 @@ const { filterProfileForViewer, calcSkillsMatch } = require('../middleware/profi
  */
 const applyToEvent = async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return errorResponse(res, 'Validation failed', 400, errors.array());
+    }
+
     const { id: eventId } = req.params;
     const volunteerId = req.user._id;
 
@@ -65,6 +83,11 @@ const applyToEvent = async (req, res) => {
  */
 const withdrawApplication = async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return errorResponse(res, 'Validation failed', 400, errors.array());
+    }
+
     const { id: eventId } = req.params;
     const volunteerId = req.user._id;
 
@@ -112,6 +135,11 @@ const withdrawApplication = async (req, res) => {
  */
 const respondToApplicant = async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return errorResponse(res, 'Validation failed', 400, errors.array());
+    }
+
     const { id: eventId, userId } = req.params;
     const { action } = req.body;
 
@@ -145,8 +173,14 @@ const respondToApplicant = async (req, res) => {
         event.selectedVolunteers.push(userId);
       }
 
-      // Add to group chat
-      if (event.groupChatId) {
+      // Create the group chat on the first selection, otherwise add to it
+      if (!event.groupChatId) {
+        event.groupChatId = await createEventGroupChat(
+          eventId,
+          event.organiserId,
+          event.selectedVolunteers
+        );
+      } else {
         await Conversation.findByIdAndUpdate(event.groupChatId, {
           $addToSet: { participants: userId }
         });
@@ -198,6 +232,11 @@ const respondToApplicant = async (req, res) => {
  */
 const getApplicants = async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return errorResponse(res, 'Validation failed', 400, errors.array());
+    }
+
     const { id: eventId } = req.params;
 
     const event = await Event.findById(eventId).populate({

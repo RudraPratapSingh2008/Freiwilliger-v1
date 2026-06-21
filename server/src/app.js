@@ -6,7 +6,7 @@ const morgan = require('morgan')
 
 // Route imports
 const authRoutes = require('./routes/auth.routes')
-const userRoutes = require('./routes/user.routes')
+const userRoutes = require('./routes/users.routes')
 const profileRoutes = require('./routes/profile.routes')
 const eventRoutes = require('./routes/events.routes')
 const messageRoutes = require('./routes/messages.routes')

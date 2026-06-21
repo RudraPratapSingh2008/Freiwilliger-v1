@@ -2,7 +2,6 @@ const Event = require("../models/Event.model");
 const User = require("../models/User.model");
 const Conversation = require("../models/Conversation.model");
 const { successResponse, errorResponse } = require("../utils/apiResponse.utils");
-const { emitToUser } = require("../services/notification.service");
 const { applyScoreDelta } = require("../services/score.service");
 const { validationResult } = require("express-validator");
 
@@ -99,86 +98,10 @@ const createEvent = async (req, res) => {
   }
 };
 
-// PATCH /events/:id/applicants/:userId - Select/reject applicant (Organiser only)
-const manageApplicant = async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return errorResponse(res, "Validation failed", 400, errors.array());
-    }
-
-    const { id: eventId, userId: applicantId } = req.params;
-    const { action } = req.body; // 'select' or 'reject'
-
-    const event = await Event.findById(eventId);
-
-    if (!event) {
-      return errorResponse(res, "Event not found.", 404);
-    }
-
-    if (event.organiserId.toString() !== req.user._id.toString()) {
-      return errorResponse(res, "Unauthorized to manage applicants for this event.", 403);
-    }
-
-    const applicationIndex = event.applications.findIndex(
-      (app) => app.volunteerId.toString() === applicantId
-    );
-
-    if (applicationIndex === -1) {
-      return errorResponse(res, "Applicant not found for this event.", 404);
-    }
-
-    const application = event.applications[applicationIndex];
-
-    if (action === "select") {
-      if (application.status === "selected") {
-        return errorResponse(res, "Applicant already selected.", 400);
-      }
-      application.status = "selected";
-      event.selectedVolunteers.push(applicantId);
-
-      // Auto-create group chat if this is the first selected volunteer
-      if (event.selectedVolunteers.length === 1 && !event.groupChatId) {
-        const groupChatId = await createEventGroupChat(eventId, event.organiserId, event.selectedVolunteers);
-        event.groupChatId = groupChatId;
-      } else if (event.groupChatId) {
-        // Add new selected volunteer to existing group chat
-        await Conversation.findByIdAndUpdate(event.groupChatId, { $addToSet: { participants: applicantId } });
-      }
-
-      // Trigger notification to volunteer
-      emitToUser(applicantId, "event_application_status", {
-        eventId: event._id,
-        eventName: event.eventName,
-        status: "selected",
-      });
-    } else if (action === "reject") {
-      if (application.status === "rejected") {
-        return errorResponse(res, "Applicant already rejected.", 400);
-      }
-      application.status = "rejected";
-      // Remove from selectedVolunteers if they were previously selected and then rejected
-      event.selectedVolunteers = event.selectedVolunteers.filter(volId => volId.toString() !== applicantId);
-
-      // Trigger notification to volunteer
-      emitToUser(applicantId, "event_application_status", {
-        eventId: event._id,
-        eventName: event.eventName,
-        status: "rejected",
-      });
-    } else {
-      return errorResponse(res, "Invalid action. Must be 'select' or 'reject'.", 400);
-    }
-
-    application.updatedAt = Date.now();
-    await event.save();
-
-    return successResponse(res, event, `Applicant ${action}ed successfully.`);
-  } catch (error) {
-    console.error("Error managing applicant:", error);
-    return errorResponse(res, "Failed to manage applicant.", 500);
-  }
-};
+// NOTE: Applicant select/reject/shortlist, apply, withdraw, and the applicants
+// list now all live in controllers/application.controller.js (Day 18 spec).
+// That version also handles 'shortlist' and keeps the group chat participants
+// in sync on withdraw, which this one didn't.
 
 // POST /events/:id/mark-attendance - Mark attendance for volunteers (Organiser only)
 const markAttendance = async (req, res) => {
@@ -246,6 +169,5 @@ const markAttendance = async (req, res) => {
 module.exports = {
   getEventFeed,
   createEvent,
-  manageApplicant,
   markAttendance,
 };
