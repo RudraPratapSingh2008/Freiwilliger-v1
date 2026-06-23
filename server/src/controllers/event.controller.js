@@ -10,9 +10,9 @@ const createEventGroupChat = async (eventId, organiserId, volunteerIds) => {
   const participants = [organiserId, ...volunteerIds];
   const newConversation = new Conversation({
     type: "group",
-    event: eventId,
+    eventId,
     participants: participants,
-    name: `Event Chat: ${eventId}` // This will be updated with event name later
+    groupName: `Event Chat: ${eventId}` // This will be updated with event name later
   });
   await newConversation.save();
   return newConversation._id;
@@ -34,7 +34,7 @@ const getEventFeed = async (req, res) => {
 
     const events = await Event.find({
       status: "open",
-      "location.coordinates": {
+      location: {
         $near: {
           $geometry: {
             type: "Point",
@@ -47,7 +47,20 @@ const getEventFeed = async (req, res) => {
       .populate("organiserId", "username profilePhotoUrl")
       .sort({ "dateTime.start": 1 });
 
-    return successResponse(res, events, "Event feed fetched successfully.");
+    const volunteerId = req.user?._id?.toString();
+    const eventsWithApplicationStatus = events.map((event) => {
+      const plainEvent = event.toObject({ virtuals: true });
+      const matchedApplication = plainEvent.applications?.find(
+        (application) => application.volunteerId?.toString() === volunteerId
+      );
+
+      return {
+        ...plainEvent,
+        applicationStatus: matchedApplication?.status || "none",
+      };
+    });
+
+    return successResponse(res, eventsWithApplicationStatus, "Event feed fetched successfully.");
   } catch (error) {
     console.error("Error fetching event feed:", error);
     return errorResponse(res, "Failed to fetch event feed.", 500);
@@ -86,10 +99,15 @@ const createEvent = async (req, res) => {
       compensation,
       roles,
       totalVolunteersNeeded,
-      status: "draft", // Start as draft, organiser can publish later
+      status: "open",
     });
 
     await newEvent.save();
+
+    if (!newEvent.groupChatId) {
+      newEvent.groupChatId = await createEventGroupChat(newEvent._id, req.user._id, []);
+      await newEvent.save();
+    }
 
     return successResponse(res, newEvent, "Event created successfully.", 201);
   } catch (error) {
@@ -166,8 +184,83 @@ const markAttendance = async (req, res) => {
   }
 };
 
+// GET /events/my/volunteer - Events the current volunteer has applied to or been selected for
+const getMyEventsVolunteer = async (req, res) => {
+  try {
+    const volunteerId = req.user._id;
+
+    const events = await Event.find({
+      "applications.volunteerId": volunteerId,
+    })
+      .populate("organiserId", "username organiserProfile.companyName organiserProfile.fullName organiserProfile.logo organiserProfile.profilePhoto")
+      .sort({ "dateTime.start": -1 });
+
+    const eventsWithStatus = events.map((event) => {
+      const plain = event.toObject({ virtuals: true });
+      const application = plain.applications.find(
+        (app) => app.volunteerId?.toString() === volunteerId.toString()
+      );
+      return {
+        ...plain,
+        applicationStatus: application?.status || "none",
+      };
+    });
+
+    return successResponse(res, eventsWithStatus, "Your events fetched successfully.");
+  } catch (error) {
+    console.error("Error fetching volunteer events:", error);
+    return errorResponse(res, "Failed to fetch your events.", 500);
+  }
+};
+
+// GET /events/my/organiser - Events posted by the current organiser
+const getMyEventsOrganiser = async (req, res) => {
+  try {
+    const events = await Event.find({
+      organiserId: req.user._id,
+      isDeleted: { $ne: true },
+    })
+      .sort({ createdAt: -1 });
+
+    return successResponse(res, events, "Your posted events fetched successfully.");
+  } catch (error) {
+    console.error("Error fetching organiser events:", error);
+    return errorResponse(res, "Failed to fetch your events.", 500);
+  }
+};
+
+// GET /events/:id - Single event detail
+const getEventById = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id)
+      .populate("organiserId", "username organiserProfile role location")
+      .populate("selectedVolunteers", "username volunteerProfile.fullName volunteerProfile.profilePhoto volunteerProfile.helpScore");
+
+    if (!event) {
+      return errorResponse(res, "Event not found.", 404);
+    }
+
+    const plain = event.toObject({ virtuals: true });
+
+    // Attach the requesting user's application status
+    const userId = req.user?._id?.toString();
+    const matchedApp = plain.applications?.find(
+      (app) => app.volunteerId?.toString() === userId
+    );
+    plain.applicationStatus = matchedApp?.status || "none";
+
+    return successResponse(res, plain, "Event fetched successfully.");
+  } catch (error) {
+    console.error("Error fetching event:", error);
+    return errorResponse(res, "Failed to fetch event.", 500);
+  }
+};
+
 module.exports = {
   getEventFeed,
   createEvent,
   markAttendance,
+  getMyEventsVolunteer,
+  getMyEventsOrganiser,
+  getEventById,
 };

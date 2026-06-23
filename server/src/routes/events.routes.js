@@ -1,8 +1,8 @@
 const express = require("express");
-const { body, param } = require("express-validator");
+const { body, param, query } = require("express-validator");
 const { verifyToken } = require("../middleware/auth.middleware");
 const { requireOrganiser, requireVolunteer } = require("../middleware/role.middleware");
-const { getEventFeed, createEvent, markAttendance } = require("../controllers/event.controller");
+const { getEventFeed, createEvent, markAttendance, getMyEventsVolunteer, getMyEventsOrganiser, getEventById } = require("../controllers/event.controller");
 const {
   applyToEvent,
   withdrawApplication,
@@ -54,11 +54,35 @@ router.get(
   "/feed",
   [
     verifyToken,
-    body("lat").isFloat().withMessage("Latitude is required and must be a number."),
-    body("lng").isFloat().withMessage("Longitude is required and must be a number."),
-    body("radius").optional().isFloat({ min: 1, max: 200 }).withMessage("Radius must be a number between 1 and 200km."),
+    query("lat").isFloat().withMessage("Latitude is required and must be a number."),
+    query("lng").isFloat().withMessage("Longitude is required and must be a number."),
+    query("radius").optional().isFloat({ min: 1, max: 200 }).withMessage("Radius must be a number between 1 and 200km."),
   ],
   getEventFeed
+);
+
+// GET /events/my/volunteer - Volunteer's applied/selected events
+router.get(
+  "/my/volunteer",
+  verifyToken,
+  requireVolunteer,
+  getMyEventsVolunteer
+);
+
+// GET /events/my/organiser - Organiser's posted events
+router.get(
+  "/my/organiser",
+  verifyToken,
+  requireOrganiser,
+  getMyEventsOrganiser
+);
+
+// GET /events/:id - Single event detail
+router.get(
+  "/:id",
+  verifyToken,
+  [param("id").isMongoId().withMessage("Invalid event ID.")],
+  getEventById
 );
 
 // POST /events - Create event (Organiser only)

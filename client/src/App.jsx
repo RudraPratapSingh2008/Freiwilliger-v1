@@ -13,6 +13,8 @@ import RoleSelection from "./features/onboarding/RoleSelection";
 import PublicProfile from "./features/profile/PublicProfile";
 import VolunteerProfileSetupPage from "./features/profile/VolunteerProfileSetupPage";
 import OrganiserProfileSetupPage from "./features/profile/OrganiserProfileSetupPage";
+import VolunteerDashboard from "./features/volunteer/VolunteerDashboard";
+import OrganiserDashboard from "./features/organiser/OrganiserDashboard";
 
 // ── Route Guards ─────────────────────────────────────────────────────────────
 import { ProtectedRoute, RoleRoute } from "./components/routing/ProtectedRoute";
@@ -22,11 +24,17 @@ import { ProtectedRoute, RoleRoute } from "./components/routing/ProtectedRoute";
 // the real pages exist. Delete and import the real ones as you go.
 // TODO: Replace DashboardRouter/SettingsPage stubs with real components when available.
 function DashboardRouter() {
-  return (
-    <div className="min-h-screen flex items-center justify-center text-gray-700">
-      Dashboard
-    </div>
-  );
+  const { user } = useSelector((state) => state.auth);
+
+  if (user?.role === "organiser") {
+    return <OrganiserDashboard />;
+  }
+
+  if (user?.role === "volunteer") {
+    return <VolunteerDashboard />;
+  }
+
+  return <Navigate to="/role-selection" replace />;
 }
 
 function SettingsPage() {

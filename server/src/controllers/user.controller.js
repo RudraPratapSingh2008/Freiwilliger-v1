@@ -247,7 +247,11 @@ exports.uploadCompanyLogo = async (req, res) => {
 exports.sendEmailVerification = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    const email = req.body.email || user.email;
+    const email =
+      req.body.email ||
+      user?.volunteerProfile?.email ||
+      user?.organiserProfile?.companyEmail ||
+      user?.organiserProfile?.email;
 
     if (!email) {
       return errorResponse(res, 'Email address is required', 400);
@@ -273,11 +277,21 @@ exports.confirmEmailVerification = async (req, res) => {
 
     await verifyEmailOtp(email, otp, 'email_verification');
 
+    const update = req.user.role === 'volunteer'
+      ? {
+          'volunteerProfile.email': email,
+          'volunteerProfile.isEmailVerified': true,
+        }
+      : {
+          'organiserProfile.email': email,
+          'organiserProfile.isEmailVerified': true,
+        };
+
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { email, isEmailVerified: true },
+      { $set: update },
       { new: true }
-    ).select('email isEmailVerified');
+    ).select('volunteerProfile.email volunteerProfile.isEmailVerified organiserProfile.email organiserProfile.isEmailVerified');
 
     return successResponse(res, user, 'Email verified successfully');
   } catch (error) {
@@ -299,9 +313,7 @@ exports.updateLocation = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.user._id,
       { 
-        location: { type: 'Point', coordinates: [lng, lat] },
-        city,
-        state
+        location: { type: 'Point', coordinates: [lng, lat], city, state },
       },
       { new: true }
     ).select('location city state');

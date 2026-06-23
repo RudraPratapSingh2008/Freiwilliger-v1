@@ -28,7 +28,7 @@ const sendEmailOtp = async (email, purpose) => {
     service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      pass: process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS,
     },
   });
 
@@ -47,10 +47,10 @@ const sendEmailOtp = async (email, purpose) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`OTP sent to ${email} for ${purpose}`);
+    console.log('OTP sent successfully');
     return true;
   } catch (error) {
-    console.error(`Error sending OTP to ${email}:`, error);
+    console.error('Error sending OTP email:', error);
     throw new Error("Failed to send OTP email.");
   }
 };

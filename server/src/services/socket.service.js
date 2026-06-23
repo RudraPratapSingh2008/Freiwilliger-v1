@@ -10,16 +10,16 @@ const initSocket = (server) => {
   });
 
   io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
+    console.log('Socket connected');
 
     // Join a private room for the user to receive targeted notifications
     socket.on('join', (userId) => {
       socket.join(userId);
-      console.log(`User ${userId} joined their notification room`);
+      console.log('Socket joined notification room');
     });
 
     socket.on('disconnect', () => {
-      console.log('User disconnected:', socket.id);
+      console.log('Socket disconnected');
     });
   });
 

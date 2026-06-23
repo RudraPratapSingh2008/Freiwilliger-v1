@@ -3,6 +3,7 @@ const helmet = require('helmet')
 const cors = require('cors')
 const rateLimit = require('express-rate-limit')
 const morgan = require('morgan')
+const cookieParser = require('cookie-parser')
 
 // Route imports
 const authRoutes = require('./routes/auth.routes')
@@ -52,6 +53,7 @@ app.use(morgan('combined'))
 // Body parsers
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ limit: '10mb', extended: true }))
+app.use(cookieParser())
 
 // Health check
 app.get('/api/v1/health', (req, res) => {

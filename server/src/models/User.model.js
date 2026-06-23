@@ -233,8 +233,6 @@ const userSchema = new Schema(
 // ─── Indexes ─────────────────────────────────────────────────────────────────
 
 userSchema.index({ location: '2dsphere' });
-userSchema.index({ username: 1 });
-userSchema.index({ phone: 1 });
 userSchema.index({ role: 1, isActive: 1 });
 
 // ─── Virtuals ────────────────────────────────────────────────────────────────

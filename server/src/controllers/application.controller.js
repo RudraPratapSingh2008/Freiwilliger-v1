@@ -10,9 +10,9 @@ const { validationResult } = require('express-validator');
 const createEventGroupChat = async (eventId, organiserId, volunteerIds) => {
   const conversation = new Conversation({
     type: 'group',
-    event: eventId,
+    eventId,
     participants: [organiserId, ...volunteerIds],
-    name: `Event Chat: ${eventId}`,
+    groupName: `Event Chat: ${eventId}`,
   });
   await conversation.save();
   return conversation._id;
@@ -104,18 +104,6 @@ const withdrawApplication = async (req, res) => {
 
     application.status = 'withdrew';
     application.updatedAt = Date.now();
-
-    // If they were already selected, remove them from selectedVolunteers
-    event.selectedVolunteers = event.selectedVolunteers.filter(
-      (v) => v.toString() !== volunteerId.toString()
-    );
-
-    // Also remove from group chat if applicable
-    if (event.groupChatId) {
-      await Conversation.findByIdAndUpdate(event.groupChatId, {
-        $pull: { participants: volunteerId }
-      });
-    }
 
     await event.save();
 
