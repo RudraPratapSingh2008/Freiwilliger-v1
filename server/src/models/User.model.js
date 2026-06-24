@@ -7,9 +7,9 @@ const { Schema } = mongoose;
 
 const addressSchema = new Schema(
   {
-    street:  { type: String, trim: true },
-    city:    { type: String, trim: true },
-    state:   { type: String, trim: true },
+    street: { type: String, trim: true },
+    city: { type: String, trim: true },
+    state: { type: String, trim: true },
     pincode: { type: String, trim: true, match: /^\d{6}$/ },
   },
   { _id: false }
@@ -18,30 +18,30 @@ const addressSchema = new Schema(
 const pastExperienceSchema = new Schema(
   {
     organisationName: { type: String, trim: true },
-    role:             { type: String, trim: true },
-    duration:         { type: String, trim: true }, // e.g. "6 months"
+    role: { type: String, trim: true },
+    duration: { type: String, trim: true }, // e.g. "6 months"
   },
   { _id: true, timestamps: false }
 );
 
 const scoreHistorySchema = new Schema(
   {
-    field:  { type: String, enum: ['helpScore', 'hireScore'], required: true },
-    delta:  { type: Number, required: true },          // positive or negative
+    field: { type: String, enum: ['helpScore', 'hireScore'], required: true },
+    delta: { type: Number, required: true },          // positive or negative
     reason: { type: String, trim: true },
-    date:   { type: Date, default: Date.now },
+    date: { type: Date, default: Date.now },
   },
   { _id: false }
 );
 
 const volunteerProfileSchema = new Schema(
   {
-    fullName:     { type: String, trim: true },
-    email:        { type: String, trim: true, lowercase: true },
+    fullName: { type: String, trim: true },
+    email: { type: String, trim: true, lowercase: true },
     isEmailVerified: { type: Boolean, default: false },
-    bio:          { type: String, trim: true },
-    age:          { type: Number, min: 18 },
-    gender:       {
+    bio: { type: String, trim: true },
+    age: { type: Number, min: 18 },
+    gender: {
       type: String,
       enum: ['Male', 'Female', 'Other', 'Prefer not to say'],
     },
@@ -49,8 +49,8 @@ const volunteerProfileSchema = new Schema(
       type: String,
       enum: ['10th', '12th', 'Diploma', 'Graduate', 'PG', 'Other'],
     },
-    occupation:   { type: String, trim: true },
-    address:      addressSchema,
+    occupation: { type: String, trim: true },
+    address: addressSchema,
 
     // Skills: preset list + free-text additions
     skills: {
@@ -79,10 +79,10 @@ const volunteerProfileSchema = new Schema(
     pastExperience: [pastExperienceSchema],
 
     profilePhoto: { type: String, trim: true }, // Cloudinary secure_url
-    idDocument:   { type: String, trim: true }, // Cloudinary secure_url — never log
+    idDocument: { type: String, trim: true }, // Cloudinary secure_url — never log
 
     // Scoring (capped 0–100 by score.service.js)
-    helpScore:    { type: Number, default: 50, min: 0, max: 100 },
+    helpScore: { type: Number, default: 50, min: 0, max: 100 },
     scoreHistory: [scoreHistorySchema],
 
     // Favourite events (ObjectId refs to Event)
@@ -101,23 +101,23 @@ const organiserProfileSchema = new Schema(
     },
 
     // Company fields
-    companyName:  { type: String, trim: true },
+    companyName: { type: String, trim: true },
     companyEmail: { type: String, trim: true, lowercase: true },
     isEmailVerified: { type: Boolean, default: false },
     companyPhone: { type: String, trim: true },
-    gstNumber:    { type: String, trim: true, uppercase: true },
-    logo:         { type: String, trim: true }, // Cloudinary secure_url
-    website:      { type: String, trim: true },
+    gstNumber: { type: String, trim: true, uppercase: true },
+    logo: { type: String, trim: true }, // Cloudinary secure_url
+    website: { type: String, trim: true },
 
     // Individual fields (fullName lives here when entityType === 'individual')
-    fullName:     { type: String, trim: true },
-    email:        { type: String, trim: true, lowercase: true },
+    fullName: { type: String, trim: true },
+    email: { type: String, trim: true, lowercase: true },
     profilePhoto: { type: String, trim: true },
 
-    bio:          { type: String, trim: true },
+    bio: { type: String, trim: true },
 
     // Scoring
-    hireScore:    { type: Number, default: 50, min: 0, max: 100 },
+    hireScore: { type: Number, default: 50, min: 0, max: 100 },
     scoreHistory: [scoreHistorySchema],
 
     volunteerCount: { type: Number, default: 0 },   // cumulative
@@ -130,9 +130,9 @@ const organiserProfileSchema = new Schema(
 
 const visibilityPrefsSchema = new Schema(
   {
-    showHelpScore:   { type: Boolean, default: true },
+    showHelpScore: { type: Boolean, default: true },
     showWorkHistory: { type: Boolean, default: true },
-    showCity:        { type: Boolean, default: true },
+    showCity: { type: Boolean, default: true },
   },
   { _id: false }
 );
@@ -191,7 +191,7 @@ const userSchema = new Schema(
         type: [Number], // [longitude, latitude]
         default: [0, 0],
       },
-      city:  { type: String, trim: true },
+      city: { type: String, trim: true },
       state: { type: String, trim: true },
     },
 
@@ -213,20 +213,20 @@ const userSchema = new Schema(
     // Network connections
     network: [
       {
-        userId:      { type: Schema.Types.ObjectId, ref: 'User' },
+        userId: { type: Schema.Types.ObjectId, ref: 'User' },
         connectedAt: { type: Date, default: Date.now },
       },
     ],
 
     favouriteUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 
-    isActive:  { type: Boolean, default: true },
-    isBanned:  { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
+    isBanned: { type: Boolean, default: false },
   },
   {
     timestamps: true,
-    toJSON:     { virtuals: true },
-    toObject:   { virtuals: true },
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
@@ -247,6 +247,15 @@ userSchema.virtual('displayName').get(function () {
     );
   }
   return this.volunteerProfile?.fullName || this.username;
+});
+
+// Convenience: display photo regardless of role (used when populating
+// conversation participants / message senders for the messaging feature)
+userSchema.virtual('displayPhoto').get(function () {
+  if (this.role === 'organiser') {
+    return this.organiserProfile?.profilePhoto || null;
+  }
+  return this.volunteerProfile?.profilePhoto || null;
 });
 
 // ─── Pre-save middleware ─────────────────────────────────────────────────────

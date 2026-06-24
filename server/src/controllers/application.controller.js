@@ -1,22 +1,14 @@
 const Event = require('../models/Event.model');
 const User = require('../models/User.model');
-const Conversation = require('../models/Conversation.model');
 const { successResponse, errorResponse } = require('../utils/apiResponse.utils');
-const { emitNotification } = require('../services/socket.service');
+const { emitToUser, NOTIFICATION_TYPES } = require('../services/notification.service');
+const {
+  createGroupChat,
+  addParticipantToGroupChat,
+  removeParticipantFromGroupChat,
+} = require('../services/conversation.service');
 const { filterProfileForViewer, calcSkillsMatch } = require('../middleware/profileFilter.middleware');
 const { validationResult } = require('express-validator');
-
-// Creates the event's group chat the first time a volunteer is selected.
-const createEventGroupChat = async (eventId, organiserId, volunteerIds) => {
-  const conversation = new Conversation({
-    type: 'group',
-    eventId,
-    participants: [organiserId, ...volunteerIds],
-    groupName: `Event Chat: ${eventId}`,
-  });
-  await conversation.save();
-  return conversation._id;
-};
 
 /**
  * POST /events/:id/apply
@@ -63,8 +55,8 @@ const applyToEvent = async (req, res) => {
     await event.save();
 
     // Emit notification to organiser
-    emitNotification(event.organiserId, {
-      type: 'new_applicant',
+    emitToUser(event.organiserId, 'notification', {
+      type: NOTIFICATION_TYPES.NEW_APPLICANT,
       eventId,
       volunteerId,
       message: `New applicant for your event: ${event.eventName}`,
@@ -163,20 +155,19 @@ const respondToApplicant = async (req, res) => {
 
       // Create the group chat on the first selection, otherwise add to it
       if (!event.groupChatId) {
-        event.groupChatId = await createEventGroupChat(
+        const groupChat = await createGroupChat(
           eventId,
           event.organiserId,
           event.selectedVolunteers
         );
+        event.groupChatId = groupChat._id;
       } else {
-        await Conversation.findByIdAndUpdate(event.groupChatId, {
-          $addToSet: { participants: userId }
-        });
+        await addParticipantToGroupChat(event.groupChatId, userId);
       }
 
       // Emit notification to volunteer
-      emitNotification(userId, {
-        type: 'selected',
+      emitToUser(userId, 'notification', {
+        type: NOTIFICATION_TYPES.SELECTED,
         eventId,
         message: `Congratulations! You have been selected for: ${event.eventName}`,
       });
@@ -188,14 +179,12 @@ const respondToApplicant = async (req, res) => {
 
       // Remove from group chat
       if (event.groupChatId) {
-        await Conversation.findByIdAndUpdate(event.groupChatId, {
-          $pull: { participants: userId }
-        });
+        await removeParticipantFromGroupChat(event.groupChatId, userId);
       }
 
       // Emit notification to volunteer
-      emitNotification(userId, {
-        type: 'rejected',
+      emitToUser(userId, 'notification', {
+        type: NOTIFICATION_TYPES.REJECTED,
         eventId,
         message: `Your application for ${event.eventName} was not selected this time.`,
       });
@@ -247,7 +236,7 @@ const getApplicants = async (req, res) => {
 
       // Apply visibility filter
       const filteredProfile = filterProfileForViewer(volunteer, 'organiser', true);
-      
+
       // Calculate skills match
       const skillsMatchPercent = calcSkillsMatch(
         volunteer.volunteerProfile?.skills || [],

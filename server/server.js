@@ -5,17 +5,18 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') })
 
 const app = require('./src/app')
 const connectDB = require('./src/config/db')
-const { initSocket } = require('./src/services/socket.service')
+const setupSocket = require('./src/config/socket')
 
-const server = http.createServer(app)
-initSocket(server)
+const httpServer = http.createServer(app)
+const io = setupSocket(httpServer)
+app.set('io', io) // makes io accessible in controllers via req.app.get('io')
 
 const PORT = process.env.PORT || 5000
 
 const startServer = async () => {
   await connectDB()
 
-  server.listen(PORT, () => {
+  httpServer.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`)
   })
 }
