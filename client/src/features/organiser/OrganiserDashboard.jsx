@@ -10,6 +10,7 @@ import {
   CalendarDays,
   Users,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -158,6 +159,15 @@ export default function OrganiserDashboard({
   onRaiseRequirement,
   onNavigate,
 }) {
+  const navigate = useNavigate();
+
+  const handleNavigate = (key) => {
+    if (key === "messages") {
+      navigate("/messages");
+    } else if (onNavigate) {
+      onNavigate(key);
+    }
+  };
   return (
     <div className="mx-auto min-h-screen max-w-xl bg-white pb-24">
       {/* Header */}
@@ -227,7 +237,7 @@ export default function OrganiserDashboard({
         <Plus className="h-6 w-6" />
       </button>
 
-      <BottomNav active={activeNav} onNavigate={onNavigate} />
+      <BottomNav active={activeNav} onNavigate={handleNavigate} />
     </div>
   );
 }

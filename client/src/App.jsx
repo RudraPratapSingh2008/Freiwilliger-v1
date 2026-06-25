@@ -8,6 +8,7 @@ import ForgotPassword from "./features/auth/ForgotPasswordPage";
 
 // ── Onboarding ───────────────────────────────────────────────────────────────
 import RoleSelection from "./features/onboarding/RoleSelection";
+import MessagesPage from "./features/messages/MessagesPage";
 
 // ── Profile ──────────────────────────────────────────────────────────────────
 import PublicProfile from "./features/profile/PublicProfile";
@@ -108,6 +109,7 @@ export default function App() {
           />
 
           <Route path="/dashboard"          element={<DashboardRouter />} />
+          <Route path="/messages"           element={<MessagesPage />} />
           <Route path="/settings/*"         element={<SettingsPage />} />
 
           {/* Public profile — any logged-in user can view */}

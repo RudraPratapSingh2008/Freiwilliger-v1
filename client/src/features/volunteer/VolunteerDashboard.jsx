@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   SlidersHorizontal,
@@ -238,6 +239,15 @@ export default function VolunteerDashboard({
   onSettingsOpen,
   onNavigate,
 }) {
+  const navigate = useNavigate();
+
+  const handleNavigate = (key) => {
+    if (key === "messages") {
+      navigate("/messages");
+    } else if (onNavigate) {
+      onNavigate(key);
+    }
+  };
   const location = useSelector((state) => state.auth.user?.location || state.auth.location || {});
   const volunteerSkills = useSelector(
     (state) => state.auth.user?.volunteerProfile?.skills || state.auth.user?.skills || []
@@ -419,7 +429,7 @@ export default function VolunteerDashboard({
         )}
       </main>
 
-      <BottomNav active={activeNav} onNavigate={onNavigate} />
+      <BottomNav active={activeNav} onNavigate={handleNavigate} />
 
       <FilterDrawer
         isOpen={isFilterOpen}
