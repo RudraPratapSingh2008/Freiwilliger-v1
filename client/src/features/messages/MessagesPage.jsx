@@ -5,6 +5,7 @@ import ChatWindow from '@/components/messages/ChatWindow';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessages } from '@/hooks/useMessages';
 import useSocket from '@/hooks/useSocket';
+import useUnreadCount from '@/hooks/useUnreadCount';
 import { cn } from '@/lib/utils';
 
 export default function MessagesPage() {
@@ -32,6 +33,20 @@ export default function MessagesPage() {
     setTyping,
   } = useSocket(activeConversation?._id);
 
+  const {
+    totalUnread,
+    unreadByConversation,
+    markAsRead,
+    initFromConversations,
+  } = useUnreadCount();
+
+  // ── Seed unread counts from conversations API data ────────────────────
+  useEffect(() => {
+    if (conversations.length > 0) {
+      initFromConversations(conversations);
+    }
+  }, [conversations, initFromConversations]);
+
   // ── Merge socket messages into message list ──────────────────────────────
   useEffect(() => {
     if (socketMessages.length > 0) {
@@ -41,10 +56,22 @@ export default function MessagesPage() {
   }, [socketMessages, appendMessage]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-  const handleSelectConversation = useCallback((conversation) => {
-    setActiveConversation(conversation);
-    setShowChatOnMobile(true);
-  }, []);
+  const handleSelectConversation = useCallback(
+    (conversation) => {
+      setActiveConversation(conversation);
+      setShowChatOnMobile(true);
+
+      // Mark this conversation as read
+      markAsRead(conversation._id);
+
+      // Also reset the unreadCount in the conversation list sidebar
+      updateConversation(conversation._id, (conv) => ({
+        ...conv,
+        unreadCount: 0,
+      }));
+    },
+    [markAsRead, updateConversation]
+  );
 
   const handleSendMessage = useCallback(
     (messageData) => {
@@ -78,6 +105,12 @@ export default function MessagesPage() {
     setActiveConversation(null);
   };
 
+  // ── Merge live unread counts into conversations for the sidebar ──────
+  const conversationsWithUnread = conversations.map((conv) => ({
+    ...conv,
+    unreadCount: unreadByConversation[conv._id] ?? conv.unreadCount ?? 0,
+  }));
+
   return (
     <div className="h-screen flex flex-col md:flex-row bg-gray-50">
       {/* Conversation List - Hidden on mobile when chat is open */}
@@ -88,7 +121,7 @@ export default function MessagesPage() {
         )}
       >
         <ConversationList
-          conversations={conversations}
+          conversations={conversationsWithUnread}
           activeConversationId={activeConversation?._id}
           onSelectConversation={handleSelectConversation}
           isLoading={isLoadingConversations}

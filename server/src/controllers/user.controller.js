@@ -325,6 +325,44 @@ exports.updateLocation = async (req, res) => {
 };
 
 /**
+ * GET /users/me/score-history
+ * Returns last 20 score changes
+ */
+exports.getScoreHistory = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate({
+      path: req.user.role === 'volunteer' 
+        ? 'volunteerProfile.scoreHistory.eventId' 
+        : 'organiserProfile.scoreHistory.eventId',
+      select: 'eventName'
+    });
+
+    if (!user) {
+      return errorResponse(res, 'User not found', 404);
+    }
+
+    const profile = req.user.role === 'volunteer' ? user.volunteerProfile : user.organiserProfile;
+    const history = profile?.scoreHistory || [];
+
+    const formattedHistory = history.map(entry => ({
+      delta: entry.delta,
+      reason: entry.reason,
+      eventId: entry.eventId?._id || null,
+      eventName: entry.eventId?.eventName || null,
+      timestamp: entry.timestamp
+    }));
+
+    // Sort descending by timestamp and take the last 20
+    formattedHistory.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const recentHistory = formattedHistory.slice(0, 20);
+
+    return successResponse(res, recentHistory, 'Score history retrieved');
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+/**
  * GET /users/:username
  * Get public profile of a user
  */

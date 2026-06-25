@@ -1,17 +1,20 @@
-const express = require('express')
+const express = require('express');
+const { verifyToken } = require('../middleware/auth.middleware');
+const {
+  createReview,
+  getUserReviews,
+  getEventReviews,
+} = require('../controllers/review.controller');
 
-const router = express.Router()
+const router = express.Router();
 
-router.post('/', (req, res) => {
-  res.json({ message: 'Create review' })
-})
+// POST /api/v1/reviews — submit a review (authenticated)
+router.post('/', verifyToken, createReview);
 
-router.get('/user/:userId', (req, res) => {
-  res.json({ message: 'Get user reviews' })
-})
+// GET /api/v1/reviews/user/:userId — all reviews about a user (authenticated)
+router.get('/user/:userId', verifyToken, getUserReviews);
 
-router.get('/event/:eventId', (req, res) => {
-  res.json({ message: 'Get event reviews' })
-})
+// GET /api/v1/reviews/event/:eventId — all reviews for an event (authenticated)
+router.get('/event/:eventId', verifyToken, getEventReviews);
 
-module.exports = router
+module.exports = router;

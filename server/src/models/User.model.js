@@ -28,8 +28,9 @@ const scoreHistorySchema = new Schema(
   {
     field: { type: String, enum: ['helpScore', 'hireScore'], required: true },
     delta: { type: Number, required: true },          // positive or negative
-    reason: { type: String, trim: true },
-    date: { type: Date, default: Date.now },
+    reason: { type: String, trim: true },             // 'review', 'no-show', etc.
+    eventId: { type: Schema.Types.ObjectId, ref: 'Event' },
+    timestamp: { type: Date, default: Date.now },
   },
   { _id: false }
 );

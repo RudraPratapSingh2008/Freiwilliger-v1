@@ -16,6 +16,10 @@ const PORT = process.env.PORT || 5000
 const startServer = async () => {
   await connectDB()
 
+  // Register cron jobs (they self-schedule via node-cron)
+  require('./src/jobs/reviewWindow.job')
+  require('./src/jobs/scoreUpdater.job')
+
   httpServer.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`)
   })

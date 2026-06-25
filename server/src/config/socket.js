@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const { verifyAccessToken } = require('../utils/jwt.utils');
 const Conversation = require('../models/Conversation.model');
+const Message = require('../models/Message.model');
 const { saveMessage, broadcastMessage } = require('../services/message.service');
 const notificationService = require('../services/notification.service');
 
@@ -162,6 +163,55 @@ const registerChatNamespace = (ioInstance) => {
                 username: socket.user.username,
                 isTyping: Boolean(isTyping),
             });
+        });
+
+        /**
+         * mark:read
+         * Body: { conversationId }
+         * Marks all unread messages in the conversation as read by the current
+         * user (updates Message.readBy) and resets the user's unread counter
+         * on the Conversation document to 0.
+         */
+        socket.on('mark:read', async ({ conversationId } = {}) => {
+            if (!conversationId) return;
+
+            try {
+                const conversation = await Conversation.findById(conversationId).select('participants unreadCounts');
+                if (!conversation) return;
+
+                const participant = conversation.participants.some(
+                    (p) => p.toString() === userId.toString()
+                );
+                if (!participant) return;
+
+                // Bulk-update: add this user to readBy on all messages in the
+                // conversation that they haven't read yet.
+                await Message.updateMany(
+                    {
+                        conversationId,
+                        isDeleted: false,
+                        senderId: { $ne: userId },                  // skip own messages
+                        'readBy.userId': { $ne: userId },           // not already in readBy
+                    },
+                    {
+                        $push: {
+                            readBy: { userId, readAt: new Date() },
+                        },
+                    }
+                );
+
+                // Reset this user's unread counter on the conversation
+                conversation.unreadCounts.set(userId.toString(), 0);
+                await conversation.save();
+
+                // Acknowledge back to the client so it can confirm the reset
+                socket.emit('unread:updated', {
+                    conversationId,
+                    unreadCount: 0,
+                });
+            } catch (err) {
+                console.error('[mark:read] error:', err.message);
+            }
         });
 
         socket.on('disconnect', () => {

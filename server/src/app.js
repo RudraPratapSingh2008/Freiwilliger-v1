@@ -13,6 +13,7 @@ const eventRoutes = require('./routes/events.routes')
 const messageRoutes = require('./routes/messages.routes')
 const reviewRoutes = require('./routes/reviews.routes')
 const networkRoutes = require('./routes/network.routes')
+const contactRequestRoutes = require('./routes/contactRequest.routes')
 
 
 const app = express()
@@ -70,6 +71,7 @@ app.use('/api/v1/events', eventRoutes)
 app.use('/api/v1/messages', messageRoutes)
 app.use('/api/v1/reviews', reviewRoutes)
 app.use('/api/v1/network', networkRoutes)
+app.use('/api/v1/contact-requests', contactRequestRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

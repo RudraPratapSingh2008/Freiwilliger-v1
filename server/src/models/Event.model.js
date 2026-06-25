@@ -172,6 +172,9 @@ const eventSchema = new Schema(
     // Prevents double-processing by the nightly cron job
     scoreProcessed: { type: Boolean, default: false },
 
+    // True while the 7-day review window is open; disabled by reviewWindow cron
+    reviewsEnabled: { type: Boolean, default: false },
+
     status: {
       type: String,
       enum: ['draft', 'open', 'closed', 'completed', 'cancelled'],
@@ -224,6 +227,14 @@ eventSchema.pre('save', function (next) {
     this.status === 'open'
   ) {
     this.status = 'closed';
+  }
+  next();
+});
+
+// Auto-enable reviews when event transitions to 'completed'
+eventSchema.pre('save', function (next) {
+  if (this.isModified('status') && this.status === 'completed') {
+    this.reviewsEnabled = true;
   }
   next();
 });

@@ -19,6 +19,9 @@ router.patch('/me/organiser-profile', userController.updateOrganiserProfile);
 router.post('/me/verify-email/send', userController.sendEmailVerification);
 router.post('/me/verify-email/confirm', userController.confirmEmailVerification);
 
+// Score history
+router.get('/me/score-history', userController.getScoreHistory);
+
 // Upload routes (Actual upload logic integrated)
 router.post('/me/photo', uploadProfilePhoto, userController.uploadPhoto);
 router.post('/me/id-document', uploadIdDocument, userController.uploadIdDocument);

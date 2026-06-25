@@ -166,16 +166,17 @@ const markAttendance = async (req, res) => {
       });
     }
 
-    await event.save();
+    // Check if all selected volunteers have their attendance marked
+    const allMarked = event.selectedVolunteers.every((volId) =>
+      event.attendanceLog.some((log) => log.volunteerId.toString() === volId.toString())
+    );
 
-    // Trigger score job (this would typically be an async background job or a direct call if simple)
-    if (attended === false) {
-      // Example: Apply penalty for no-show
-      await applyScoreDelta(volunteerId, "helpScore", -10, "No-show penalty for event: " + event.eventName);
-    } else {
-      // Example: Apply positive score for attendance (if applicable, or handled by reviews)
-      // await applyScoreDelta(volunteerId, "helpScore", 5, "Attended event: " + event.eventName);
+    // Auto-complete the event when all attendance is marked
+    if (allMarked && event.status !== 'completed') {
+      event.status = 'completed';
     }
+
+    await event.save();
 
     return successResponse(res, event, "Attendance marked successfully.");
   } catch (error) {
