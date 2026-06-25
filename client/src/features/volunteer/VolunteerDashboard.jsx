@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import FilterDrawer, { DEFAULT_FILTERS } from "@/components/FilterDrawer";
 import EventCard from "@/components/EventCard";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -350,13 +351,16 @@ export default function VolunteerDashboard({
 
           <p className="text-lg font-bold tracking-tight text-violet-600">Freiwilliger</p>
 
-          <button
-            type="button"
-            onClick={onSettingsOpen}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-50"
-          >
-            <Settings className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <button
+              type="button"
+              onClick={onSettingsOpen}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-50"
+            >
+              <Settings className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <div className="mt-3 flex items-center gap-2">

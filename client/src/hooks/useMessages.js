@@ -1,132 +1,126 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import axios from '@/lib/axios';
+import { fetchMessages as apiFetchMessages } from '@/api/messagesApi';
+
+/**
+ * Normalize a message from the backend shape to the shape the UI components
+ * expect. The backend populates `senderId` as a User object; the UI reads
+ * flat fields like `sender.name`, `sender.avatar`, and a top-level `senderId`
+ * string.
+ */
+const normalizeMessage = (msg) => {
+  const senderObj = msg.senderId && typeof msg.senderId === 'object' ? msg.senderId : null;
+
+  return {
+    _id: msg._id,
+    conversationId: msg.conversationId,
+    // Keep senderId as a plain string ID for ownership checks
+    senderId: senderObj ? (senderObj._id || senderObj.id) : msg.senderId,
+    sender: senderObj
+      ? {
+          _id: senderObj._id || senderObj.id,
+          name:
+            senderObj.displayName ||
+            senderObj.volunteerProfile?.fullName ||
+            senderObj.organiserProfile?.fullName ||
+            senderObj.organiserProfile?.companyName ||
+            senderObj.username ||
+            'Unknown',
+          avatar:
+            senderObj.displayPhoto ||
+            senderObj.volunteerProfile?.profilePhoto ||
+            senderObj.organiserProfile?.profilePhoto ||
+            null,
+        }
+      : msg.sender || { _id: msg.senderId, name: 'Unknown' },
+    text: msg.text,
+    attachments: msg.attachments || [],
+    // Map backend's sentAt to the timestamp field the UI reads
+    timestamp: msg.sentAt || msg.timestamp || msg.createdAt,
+    readBy: msg.readBy || [],
+    readStatus: msg.readStatus || 'sent',
+  };
+};
 
 export const useMessages = (conversationId) => {
   const { user } = useSelector((state) => state.auth);
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isTyping, setIsTyping] = useState(false);
+  const [pagination, setPagination] = useState({ page: 1, hasMore: false });
+  const fetchedConvRef = useRef(null);
 
   // Fetch messages for a conversation
-  const fetchMessages = useCallback(async () => {
-    if (!conversationId) return;
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      // TODO: Replace with actual API endpoint
-      // const response = await axios.get(`/api/messages/conversations/${conversationId}`);
-      // setMessages(response.data.messages);
-    } catch (err) {
-      setError(err.message);
-      console.error('Error fetching messages:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [conversationId]);
-
-  // Send a message
-  const sendMessage = useCallback(
-    async (text) => {
-      if (!text.trim() || !conversationId) return;
+  const fetchMessages = useCallback(
+    async (page = 1) => {
+      if (!conversationId) return;
 
       try {
-        // TODO: Replace with actual API endpoint
-        // const response = await axios.post('/api/messages/send', {
-        //   conversationId,
-        //   text,
-        // });
+        setIsLoading(true);
+        setError(null);
+        const res = await apiFetchMessages(conversationId, page);
+        // Backend wraps in { success, data: { messages, pagination }, message }
+        const payload = res.data || res;
+        const rawMessages = payload.messages || [];
+        const paginationData = payload.pagination || {};
 
-        // Optimistically add message to state
-        const newMessage = {
-          _id: `temp_${Date.now()}`,
-          conversationId,
-          senderId: user?._id,
-          text,
-          timestamp: new Date(),
-          readStatus: 'sent',
-        };
+        // API returns newest-first; reverse for chronological display
+        const normalized = rawMessages.map(normalizeMessage).reverse();
 
-        setMessages((prev) => [...prev, newMessage]);
-        return newMessage;
+        if (page === 1) {
+          setMessages(normalized);
+        } else {
+          // Prepend older messages for infinite scroll
+          setMessages((prev) => [...normalized, ...prev]);
+        }
+
+        setPagination({
+          page: paginationData.page || page,
+          hasMore: paginationData.hasMore || false,
+          total: paginationData.total,
+        });
       } catch (err) {
-        setError(err.message);
-        console.error('Error sending message:', err);
-        throw err;
+        setError(err.response?.data?.message || err.message);
+        console.error('Error fetching messages:', err);
+      } finally {
+        setIsLoading(false);
       }
     },
-    [conversationId, user?._id]
+    [conversationId]
   );
 
-  // Mark messages as read
-  const markAsRead = useCallback(
-    async (messageIds) => {
-      try {
-        // TODO: Replace with actual API endpoint
-        // await axios.post('/api/messages/mark-as-read', { messageIds });
-      } catch (err) {
-        console.error('Error marking messages as read:', err);
-      }
-    },
-    []
-  );
+  // Load more (older) messages
+  const loadMore = useCallback(() => {
+    if (!pagination.hasMore || isLoading) return;
+    fetchMessages(pagination.page + 1);
+  }, [fetchMessages, pagination, isLoading]);
 
-  // Delete a message
-  const deleteMessage = useCallback(
-    async (messageId) => {
-      try {
-        // TODO: Replace with actual API endpoint
-        // await axios.delete(`/api/messages/${messageId}`);
-        setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
-      } catch (err) {
-        setError(err.message);
-        console.error('Error deleting message:', err);
-        throw err;
-      }
-    },
-    []
-  );
+  // Append a message to the list (used for optimistic adds and socket events)
+  const appendMessage = useCallback((msg) => {
+    setMessages((prev) => {
+      // Deduplicate by _id
+      if (msg._id && prev.some((m) => m._id === msg._id)) return prev;
+      return [...prev, normalizeMessage(msg)];
+    });
+  }, []);
 
-  // Edit a message
-  const editMessage = useCallback(
-    async (messageId, newText) => {
-      try {
-        // TODO: Replace with actual API endpoint
-        // const response = await axios.patch(`/api/messages/${messageId}`, {
-        //   text: newText,
-        // });
-
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg._id === messageId ? { ...msg, text: newText, edited: true } : msg
-          )
-        );
-      } catch (err) {
-        setError(err.message);
-        console.error('Error editing message:', err);
-        throw err;
-      }
-    },
-    []
-  );
-
-  // Fetch messages on mount or when conversationId changes
+  // Fetch messages when conversationId changes
   useEffect(() => {
-    fetchMessages();
+    if (conversationId && conversationId !== fetchedConvRef.current) {
+      fetchedConvRef.current = conversationId;
+      setMessages([]);
+      fetchMessages(1);
+    }
   }, [conversationId, fetchMessages]);
 
   return {
     messages,
+    setMessages,
     isLoading,
     error,
-    isTyping,
-    setIsTyping,
-    sendMessage,
-    markAsRead,
-    deleteMessage,
-    editMessage,
-    refetch: fetchMessages,
+    pagination,
+    fetchMessages,
+    loadMore,
+    appendMessage,
   };
 };

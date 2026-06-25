@@ -13,6 +13,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 // ---------------------------------------------------------------------------
 // Status styling
@@ -192,13 +193,16 @@ export default function OrganiserDashboard({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onSettingsOpen}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-50"
-          >
-            <Settings className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <button
+              type="button"
+              onClick={onSettingsOpen}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-50"
+            >
+              <Settings className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Sub-header */}

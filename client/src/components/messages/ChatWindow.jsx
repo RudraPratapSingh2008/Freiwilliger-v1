@@ -21,11 +21,13 @@ export default function ChatWindow({
   onBack,
   isLoading = false,
   isTyping = false,
+  onTyping,
   className,
 }) {
   const [messageText, setMessageText] = useState('');
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
+  const typingTimerRef = useRef(null);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -37,6 +39,10 @@ export default function ChatWindow({
   const handleSendMessage = () => {
     if (!messageText.trim()) return;
 
+    // Stop typing indicator immediately on send
+    clearTimeout(typingTimerRef.current);
+    onTyping?.(false);
+
     onSendMessage({
       conversationId: conversation._id,
       text: messageText,
@@ -46,6 +52,25 @@ export default function ChatWindow({
     setMessageText('');
     inputRef.current?.focus();
   };
+
+  // Debounced typing emission
+  const handleInputChange = (e) => {
+    setMessageText(e.target.value);
+
+    // Emit typing:true immediately
+    onTyping?.(true);
+
+    // Reset the stop-typing timer — fires after 2s of inactivity
+    clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => {
+      onTyping?.(false);
+    }, 2000);
+  };
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => clearTimeout(typingTimerRef.current);
+  }, []);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -190,7 +215,7 @@ export default function ChatWindow({
             type="text"
             placeholder="Type a message..."
             value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
+            onChange={handleInputChange}
             onKeyPress={handleKeyPress}
             className="flex-1 resize-none rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
           />
