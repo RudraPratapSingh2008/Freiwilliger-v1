@@ -52,9 +52,8 @@ function StarRating({ value, onChange, readOnly = false }) {
             aria-label={`${starValue} star${starValue > 1 ? "s" : ""}`}
           >
             <Star
-              className={`h-6 w-6 transition-colors ${
-                filled ? "fill-amber-400 text-amber-400" : "fill-transparent text-gray-300"
-              }`}
+              className={`h-6 w-6 transition-colors ${filled ? "fill-amber-400 text-amber-400" : "fill-transparent text-gray-300"
+                }`}
             />
           </button>
         );
@@ -108,7 +107,7 @@ function SubmittedReview({ review }) {
     <div className="rounded-xl bg-gray-50 p-3">
       <div className="mb-1.5 flex items-center justify-between">
         <span className="text-xs font-medium text-gray-600">Your review</span>
-        <StarRating value={review.stars} onChange={() => {}} readOnly />
+        <StarRating value={review.stars} onChange={() => { }} readOnly />
       </div>
       {review.text && <p className="text-sm text-gray-700">{review.text}</p>}
     </div>
@@ -224,9 +223,8 @@ function CompletedCard({ event, onSubmitReview, isSubmittingReview }) {
               Rate this event
             </span>
             <ChevronDown
-              className={`h-4 w-4 text-amber-700 transition-transform ${
-                formOpen ? "rotate-180" : ""
-              }`}
+              className={`h-4 w-4 text-amber-700 transition-transform ${formOpen ? "rotate-180" : ""
+                }`}
             />
           </button>
 
@@ -234,7 +232,16 @@ function CompletedCard({ event, onSubmitReview, isSubmittingReview }) {
             <div className="mt-2">
               <ReviewForm
                 isSubmitting={isSubmittingReview}
-                onSubmit={(review) => onSubmitReview(event.id, review)}
+                onSubmit={(review) =>
+                  // The backend (review.controller.js) requires revieweeId on
+                  // every submission. This is always the event's organiser
+                  // here, since a volunteer reviewing on this page can only
+                  // ever review the organiser they volunteered for.
+                  onSubmitReview(event.id, {
+                    ...review,
+                    revieweeId: event.organiserId,
+                  })
+                }
               />
             </div>
           )}
@@ -283,7 +290,9 @@ const EMPTY_COPY = {
 };
 
 export default function MyEvents({
-  events = [],
+  events = [], // each completed event must include `organiserId` (the
+  // organiser's user id) so a submitted review can carry revieweeId —
+  // see CompletedCard's onSubmit below.
   isLoading = false,
   onViewGroupChat,
   onSubmitReview, // (eventId, { stars, text }) => Promise<void> | void
@@ -313,11 +322,10 @@ export default function MyEvents({
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                activeTab === tab.key
+              className={`flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${activeTab === tab.key
                   ? "bg-indigo-600 text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+                }`}
             >
               {tab.label}
               {grouped[tab.key].length > 0 && (

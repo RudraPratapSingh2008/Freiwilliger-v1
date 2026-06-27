@@ -11,12 +11,12 @@ const getTierColor = (score) => {
 };
 
 const getTierLabel = (score, role) => {
-  const prefix = role === 'organiser' ? 'Organiser' : 'Volunteer';
-  if (score >= 80) return `Elite ${prefix}`;
-  if (score >= 60) return `Trusted ${prefix}`;
-  if (score >= 40) return `Average ${prefix}`;
-  if (score >= 20) return `Needs Improvement`;
-  return `Poor`;
+  const isVolunteer = role !== 'organiser';
+  if (score >= 80) return isVolunteer ? '🏆 Top Volunteer' : '🏆 Trusted Organiser';
+  if (score >= 60) return isVolunteer ? '✅ Reliable Volunteer' : '✅ Good Organiser';
+  if (score >= 40) return isVolunteer ? '🌱 Building Reputation' : '🌱 New Organiser';
+  if (score >= 20) return isVolunteer ? '⚠️ Needs Improvement' : '⚠️ Review Carefully';
+  return isVolunteer ? '🚫 Low Trust' : '🚫 Caution';
 };
 
 const sizeClasses = {
@@ -43,7 +43,7 @@ export function ScoreBadge({ score, role = 'volunteer', size = 'md', className }
       >
         {safeScore}
       </div>
-      
+
       {/* Tooltip */}
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
         <div className="bg-slate-900 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">

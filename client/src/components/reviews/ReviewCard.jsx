@@ -1,97 +1,56 @@
 import React from 'react';
-import { Star, AlertTriangle } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Badge } from '../ui/badge';
-import { formatDistanceToNow } from '../../utils/date'; // Or implement a simple relative date here
+import { cn } from '@/lib/utils';
+import { Badge } from './badge';
 
-// Simple relative date formatter if the util doesn't exist yet
-const formatRelative = (dateStr) => {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  const diffInSeconds = Math.floor((new Date() - date) / 1000);
-  
-  if (diffInSeconds < 60) return 'just now';
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  const days = Math.floor(diffInSeconds / 86400);
-  if (days === 1) return 'yesterday';
-  if (days < 30) return `${days} days ago`;
-  return date.toLocaleDateString();
+const getTierColor = (score) => {
+  if (score >= 80) return 'bg-emerald-500 text-white';
+  if (score >= 60) return 'bg-blue-500 text-white';
+  if (score >= 40) return 'bg-amber-500 text-white';
+  if (score >= 20) return 'bg-orange-500 text-white';
+  return 'bg-red-500 text-white';
 };
 
-export function ReviewCard({ review }) {
-  if (!review || !review.reviewerId) return null;
+const getTierLabel = (score, role) => {
+  const isVolunteer = role !== 'organiser';
+  if (score >= 80) return isVolunteer ? '🏆 Top Volunteer' : '🏆 Trusted Organiser';
+  if (score >= 60) return isVolunteer ? '✅ Reliable Volunteer' : '✅ Good Organiser';
+  if (score >= 40) return isVolunteer ? '🌱 Building Reputation' : '🌱 New Organiser';
+  if (score >= 20) return isVolunteer ? '⚠️ Needs Improvement' : '⚠️ Review Carefully';
+  return isVolunteer ? '🚫 Low Trust' : '🚫 Caution';
+};
 
-  const {
-    reviewerId,
-    stars,
-    comment,
-    isNoShow,
-    createdAt
-  } = review;
+const sizeClasses = {
+  sm: 'w-6 h-6 text-xs',
+  md: 'w-9 h-9 text-sm',
+  lg: 'w-12 h-12 text-base',
+};
 
-  const {
-    username,
-    role,
-    volunteerProfile,
-    organiserProfile
-  } = reviewerId;
+export function ScoreBadge({ score, role = 'volunteer', size = 'md', className }) {
+  const safeScore = Math.max(0, Math.min(100, Number(score) || 0));
+  const colorClass = getTierColor(safeScore);
+  const sizeClass = sizeClasses[size] || sizeClasses.md;
+  const label = getTierLabel(safeScore, role);
 
-  // Determine photo and name depending on populated data structure
-  // Usually from the controller populate: volunteerProfile.profilePhoto, organiserProfile.profilePhoto, organiserProfile.logo
-  const photo = role === 'organiser'
-    ? organiserProfile?.logo || organiserProfile?.profilePhoto
-    : volunteerProfile?.profilePhoto;
-    
-  const initials = username ? username.substring(0, 2).toUpperCase() : 'U';
-  const roleLabel = role === 'organiser' ? 'Organiser' : 'Volunteer';
-  
   return (
-    <div className="p-4 border rounded-lg bg-white shadow-sm space-y-3">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center space-x-3">
-          <Avatar className="w-10 h-10 border">
-            <AvatarImage src={photo} alt={username} />
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
-          
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-900">{username}</span>
-              <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-slate-500">
-                {roleLabel}
-              </Badge>
-            </div>
-            
-            <div className="flex items-center mt-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                  key={star}
-                  className={`w-3.5 h-3.5 ${
-                    star <= stars ? 'fill-amber-400 text-amber-400' : 'fill-slate-100 text-slate-200'
-                  }`}
-                />
-              ))}
-              <span className="text-xs text-slate-400 ml-2">
-                {formatRelative(createdAt)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {isNoShow && (
-          <Badge variant="destructive" className="flex items-center gap-1 shadow-sm">
-            <AlertTriangle className="w-3 h-3" />
-            No-Show
-          </Badge>
+    <div className="group relative inline-flex items-center justify-center">
+      <div
+        className={cn(
+          'flex items-center justify-center rounded-full font-bold shadow-sm',
+          colorClass,
+          sizeClass,
+          className
         )}
+      >
+        {safeScore}
       </div>
 
-      {comment && (
-        <p className="text-sm text-slate-700 leading-relaxed break-words">
-          {comment}
-        </p>
-      )}
+      {/* Tooltip */}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
+        <div className="bg-slate-900 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+          {label}
+        </div>
+        <div className="w-2 h-2 bg-slate-900 transform rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2"></div>
+      </div>
     </div>
   );
 }

@@ -19,8 +19,12 @@ const createReview = async (req, res) => {
       return errorResponse(res, 'eventId, revieweeId, and stars are required.', 400);
     }
 
-    if (stars < 1 || stars > 5) {
-      return errorResponse(res, 'Stars must be between 1 and 5.', 400);
+    if (!mongoose.Types.ObjectId.isValid(eventId) || !mongoose.Types.ObjectId.isValid(revieweeId)) {
+      return errorResponse(res, 'eventId and revieweeId must be valid IDs.', 400);
+    }
+
+    if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
+      return errorResponse(res, 'Stars must be a whole number between 1 and 5.', 400);
     }
 
     // Cannot review yourself
@@ -60,6 +64,34 @@ const createReview = async (req, res) => {
       );
     }
 
+    // ── Eligibility: reviewee must be a legitimate counterpart for THIS
+    //    event — prevents an organiser/volunteer from filing a review (and
+    //    therefore a score change) against someone who had nothing to do
+    //    with the event. ─────────────────────────────────────────────────
+    if (isOrganiser) {
+      // Organiser may only review one of their own selected volunteers
+      // (covers both completed attendance and no-show reviews).
+      const isSelectedVolunteer = event.selectedVolunteers.some(
+        (id) => id.toString() === revieweeId.toString()
+      );
+      if (!isSelectedVolunteer) {
+        return errorResponse(
+          res,
+          'You can only review volunteers who were selected for this event.',
+          403
+        );
+      }
+    } else {
+      // Volunteer may only review the organiser of this event.
+      if (event.organiserId.toString() !== revieweeId.toString()) {
+        return errorResponse(
+          res,
+          "You can only review this event's organiser.",
+          403
+        );
+      }
+    }
+
     // ── Determine review type from role ──────────────────────────────────
     const reviewType =
       req.user.role === 'organiser'
@@ -88,6 +120,15 @@ const createReview = async (req, res) => {
         'You have already submitted a review for this person for this event.',
         409
       );
+    }
+    // Mongoose schema validation failure (e.g. comment too long)
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((e) => e.message);
+      return errorResponse(res, messages.join(' '), 400);
+    }
+    // Malformed ObjectId reaching a query
+    if (error.name === 'CastError') {
+      return errorResponse(res, `Invalid value for "${error.path}".`, 400);
     }
     console.error('Error creating review:', error);
     return errorResponse(res, 'Failed to create review.', 500);

@@ -50,8 +50,8 @@ function CompensationBadge({ event }) {
     type === "Paid" || type === "Paid + Refreshments"
       ? `₹${event.amount ?? "—"}${event.amountUnit === "per-hour" ? "/hr" : ""} paid`
       : type === "Refreshments only"
-      ? "Refreshments provided"
-      : "Unpaid";
+        ? "Refreshments provided"
+        : "Unpaid";
 
   return (
     <div className="flex items-center gap-2 rounded-xl bg-violet-50 px-4 py-3">
@@ -74,37 +74,61 @@ function StarRating({ value = 0, size = "h-3.5 w-3.5" }) {
       {[1, 2, 3, 4, 5].map((i) => (
         <Star
           key={i}
-          className={`${size} ${
-            i <= Math.round(value)
+          className={`${size} ${i <= Math.round(value)
               ? "fill-amber-400 text-amber-400"
               : "fill-slate-200 text-slate-200"
-          }`}
+            }`}
         />
       ))}
     </div>
   );
 }
 
+function formatRelative(dateStr) {
+  if (!dateStr) return "";
+  const diffInSeconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diffInSeconds < 60) return "just now";
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  const days = Math.floor(diffInSeconds / 86400);
+  if (days === 1) return "yesterday";
+  if (days < 30) return `${days} days ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
 function ReviewCard({ review }) {
+  // NOTE: shaped to match the actual GET /reviews/event/:eventId response
+  // (review.controller.js) — reviewerId is a populated User doc, the
+  // rating field is `stars` (not `rating`), and the date is `createdAt`
+  // (not a pre-formatted `date` string). The previous version expected
+  // review.authorName / review.rating / review.date, which don't exist
+  // on real review documents.
+  const reviewerName = review.reviewerId?.username || "Anonymous";
+
   return (
     <div className="rounded-xl border border-slate-100 p-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
-            {review.authorName?.[0] || "?"}
+            {reviewerName[0]}
           </div>
-          <p className="text-sm font-medium text-slate-700">
-            {review.authorName || "Anonymous"}
-          </p>
+          <p className="text-sm font-medium text-slate-700">{reviewerName}</p>
         </div>
-        <StarRating value={review.rating} />
+        <StarRating value={review.stars} />
       </div>
       {review.comment && (
         <p className="mt-2 text-sm text-slate-500">{review.comment}</p>
       )}
-      {review.date && (
-        <p className="mt-1.5 text-xs text-slate-300">{review.date}</p>
-      )}
+      <div className="mt-1.5 flex items-center gap-2">
+        {review.createdAt && (
+          <p className="text-xs text-slate-300">{formatRelative(review.createdAt)}</p>
+        )}
+        {review.isNoShow && (
+          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
+            No-show
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -148,9 +172,8 @@ function ActionBar({
             className="h-11 w-11 shrink-0 border-slate-200"
           >
             <Heart
-              className={`h-5 w-5 ${
-                isSaved ? "fill-rose-500 text-rose-500" : "text-slate-500"
-              }`}
+              className={`h-5 w-5 ${isSaved ? "fill-rose-500 text-rose-500" : "text-slate-500"
+                }`}
             />
           </Button>
 
@@ -221,7 +244,7 @@ export default function EventDetail({
 
   const avgRating = useMemo(() => {
     if (!reviews.length) return 0;
-    return reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length;
+    return reviews.reduce((sum, r) => sum + (r.stars || 0), 0) / reviews.length;
   }, [reviews]);
 
   return (
@@ -350,11 +373,10 @@ export default function EventDetail({
                     return (
                       <span
                         key={skill}
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                          matched
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${matched
                             ? "bg-emerald-100 text-emerald-700"
                             : "bg-slate-100 text-slate-500"
-                        }`}
+                          }`}
                       >
                         {matched && <Check className="mr-1 inline h-3 w-3" />}
                         {skill}
@@ -383,9 +405,8 @@ export default function EventDetail({
                 Min Help Score
               </span>
               <span
-                className={`font-medium ${
-                  helpScoreOk ? "text-emerald-600" : "text-rose-500"
-                }`}
+                className={`font-medium ${helpScoreOk ? "text-emerald-600" : "text-rose-500"
+                  }`}
               >
                 You: {user.helpScore ?? 0} / Req: {event.minHelpScore ?? 0}
               </span>

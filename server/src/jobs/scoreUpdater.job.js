@@ -7,17 +7,28 @@ const { applyScoreDelta } = require('../services/score.service');
  * Score Updater — Daily Cron (02:00 IST / 20:30 UTC)
  *
  * After the 7-day review window closes, this job processes all unscored
- * reviews for each completed event:
+ * reviews for each completed event, PLUS any no-show attendance records
+ * that never got a formal review:
  *
- *   • Normal review  → delta = (stars / 5) * 10  (range: +2 to +10)
- *   • No-show flag   → delta = −15 penalty
+ *   • Normal review        → delta = (stars / 5) * 10  (range: +2 to +10)
+ *   • No-show review flag  → delta = −10 penalty
+ *   • No-show attendance   → delta = −10 penalty (attendanceLog.attended
+ *                             === false, even if the organiser never wrote
+ *                             a review — see attendanceLog sweep below)
+ *
+ * NOTE on timing: this intentionally waits 7 days (not 24h) before
+ * processing an event, matching the review submission window in
+ * review.controller.js / reviewWindow.job.js. Processing earlier (e.g. at
+ * 24h) would risk marking an event scoreProcessed before volunteers/
+ * organisers who review on day 2–7 ever get scored, since each event is
+ * only ever processed once.
  *
  * Review direction determines the target score field:
  *   • organiser_to_volunteer → volunteer's helpScore
  *   • volunteer_to_organiser → organiser's hireScore
  *
- * Once every review for an event is applied, the event's scoreProcessed
- * flag is set to true so it is never re-processed.
+ * Once every review + attendance record for an event is applied, the
+ * event's scoreProcessed flag is set to true so it is never re-processed.
  */
 cron.schedule('30 20 * * *', async () => {
   // 20:30 UTC = 02:00 IST
@@ -44,6 +55,10 @@ cron.schedule('30 20 * * *', async () => {
         scoreApplied: false,
       });
 
+      // Track which volunteers already got a no-show penalty via a review,
+      // so the attendanceLog sweep below doesn't double-penalize them.
+      const noShowHandled = new Set();
+
       for (const review of reviews) {
         try {
           // Determine target user and score field
@@ -60,6 +75,7 @@ cron.schedule('30 20 * * *', async () => {
             // No-show penalty
             delta = -10;
             reason = 'no-show';
+            noShowHandled.add(targetUserId.toString());
           } else {
             // Star-based delta: (stars / 5) * 10 → 1★ = +2, 5★ = +10
             delta = (review.stars / 5) * 10;
@@ -85,12 +101,40 @@ cron.schedule('30 20 * * *', async () => {
         }
       }
 
+      // ── Automatic no-show penalty straight from attendance records ──────
+      // An organiser may mark a volunteer attended:false without ever
+      // submitting a formal review for them. Those no-shows still need to
+      // be penalized, so sweep attendanceLog directly for anyone the
+      // review loop above didn't already cover.
+      for (const log of event.attendanceLog) {
+        if (log.attended !== false) continue;
+        const volunteerKey = log.volunteerId.toString();
+        if (noShowHandled.has(volunteerKey)) continue; // already penalized via review
+
+        try {
+          await applyScoreDelta(
+            log.volunteerId,
+            'helpScore',
+            -10,
+            'no-show',
+            event._id
+          );
+          noShowHandled.add(volunteerKey);
+        } catch (attendanceErr) {
+          console.error(
+            `${label} Failed to apply no-show penalty for volunteer ${log.volunteerId}:`,
+            attendanceErr
+          );
+          // Continue with remaining attendance entries
+        }
+      }
+
       // Mark event as fully processed
       event.scoreProcessed = true;
       await event.save();
 
       console.log(
-        `${label} Event "${event.eventName}" — ${reviews.length} review(s) scored.`
+        `${label} Event "${event.eventName}" — ${reviews.length} review(s), ${noShowHandled.size} no-show(s) scored.`
       );
     }
   } catch (error) {
