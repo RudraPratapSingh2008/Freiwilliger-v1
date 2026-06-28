@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 
 // ── Auth Pages ───────────────────────────────────────────────────────────────
@@ -15,24 +15,41 @@ import PublicProfile from "./features/profile/PublicProfile";
 import VolunteerProfileSetupPage from "./features/profile/VolunteerProfileSetupPage";
 import OrganiserProfileSetupPage from "./features/profile/OrganiserProfileSetupPage";
 import VolunteerDashboard from "./features/volunteer/VolunteerDashboard";
-import OrganiserDashboard from "./features/organiser/OrganiserDashboard";
+import OrganiserDashboardPage from "./features/organiser/OrganiserDashboardPage";
+
+// ── Events / Reviews (Day 31–33) ──────────────────────────────────────────────
+import EventDetailPage from "./features/volunteer/EventDetailPage";
+import MyEventsPage from "./features/volunteer/MyEventsPage";
+import RaiseRequirementPage from "./features/organiser/RaiseRequirementPage";
+import ApplicantListPage from "./features/organiser/ApplicantListPage";
 
 // ── Route Guards ─────────────────────────────────────────────────────────────
 import { ProtectedRoute, RoleRoute } from "./components/routing/ProtectedRoute";
 
-// ── Placeholder pages (replace with real components as you build them) ───────
-// These are lightweight stubs so the router doesn't crash before
-// the real pages exist. Delete and import the real ones as you go.
-// TODO: Replace DashboardRouter/SettingsPage stubs with real components when available.
+// SettingsPage below is still a stub — replace when that page is built.
+// TODO: Replace SettingsPage stub with a real component when available.
 function DashboardRouter() {
   const { user } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
 
   if (user?.role === "organiser") {
-    return <OrganiserDashboard />;
+    return <OrganiserDashboardPage />;
   }
 
   if (user?.role === "volunteer") {
-    return <VolunteerDashboard />;
+    return (
+      <VolunteerDashboard
+        avatarUrl={user?.volunteerProfile?.profilePhoto}
+        onProfileOpen={() => user?.username && navigate(`/profile/${user.username}`)}
+        onSettingsOpen={() => navigate("/settings")}
+        onNavigate={(key) => {
+          if (key === "myEvents") navigate("/my-events");
+          else if (key === "home") navigate("/dashboard");
+          // "network" has no page built yet anywhere in this app —
+          // intentionally left unwired rather than pointing at a 404.
+        }}
+      />
+    );
   }
 
   return <Navigate to="/role-selection" replace />;
@@ -45,9 +62,6 @@ function SettingsPage() {
     </div>
   );
 }
-
-// ── Optional role-specific stubs (uncomment when built) ─────────────────────
-// import RaiseRequirement from "./features/organiser/RaiseRequirement";
 
 export default function App() {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
@@ -124,18 +138,18 @@ export default function App() {
           </Route>
 
           {/* ── Organiser-only routes ── */}
-          {/* Uncomment when RaiseRequirement is built (Day 23):
           <Route element={<RoleRoute requiredRole="organiser" />}>
-            <Route path="/post-event" element={<RaiseRequirement />} />
+            <Route path="/post-event" element={<RaiseRequirementPage />} />
+            <Route path="/events/:eventId/applicants" element={<ApplicantListPage />} />
           </Route>
-          */}
 
           {/* ── Volunteer-only routes ── */}
-          {/* Uncomment when VolunteerDashboard is built (Day 11):
           <Route element={<RoleRoute requiredRole="volunteer" />}>
-            <Route path="/events" element={<EventsPage />} />
+            <Route path="/my-events" element={<MyEventsPage />} />
           </Route>
-          */}
+
+          {/* ── Shared event detail route (any authenticated user) ── */}
+          <Route path="/events/:eventId" element={<EventDetailPage />} />
         </Route>
 
         {/* ── 404 catch-all ── */}

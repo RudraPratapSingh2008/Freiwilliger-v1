@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ScoreBadge } from "@/components/ui/ScoreBadge";
 import {
   Sheet,
   SheetContent,
@@ -26,14 +27,6 @@ import {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function getScoreTier(score) {
-  if (score >= 80) return { label: "Top", className: "bg-emerald-100 text-emerald-700 border-emerald-200" };
-  if (score >= 60) return { label: "Reliable", className: "bg-blue-100 text-blue-700 border-blue-200" };
-  if (score >= 40) return { label: "Building", className: "bg-amber-100 text-amber-700 border-amber-200" };
-  if (score >= 20) return { label: "Review", className: "bg-orange-100 text-orange-700 border-orange-200" };
-  return { label: "Caution", className: "bg-red-100 text-red-700 border-red-200" };
-}
 
 function getMatchBarColor(percent) {
   if (percent >= 70) return "bg-emerald-500";
@@ -47,22 +40,6 @@ function relativeDate(dateString) {
   if (days <= 0) return "Today";
   if (days === 1) return "Yesterday";
   return `${days} days ago`;
-}
-
-// ---------------------------------------------------------------------------
-// ScoreBadge
-// ---------------------------------------------------------------------------
-
-function ScoreBadge({ score }) {
-  const tier = getScoreTier(score);
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${tier.className}`}
-      title={tier.label}
-    >
-      {score}
-    </span>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -113,7 +90,7 @@ function ApplicantCard({
                 @{applicant.username}
               </p>
             </div>
-            <ScoreBadge score={applicant.helpScore} />
+            <ScoreBadge score={applicant.helpScore} role="volunteer" size="sm" />
           </div>
 
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">

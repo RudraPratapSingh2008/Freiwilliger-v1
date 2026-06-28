@@ -176,7 +176,7 @@ export const eventsApi = createApi({
         const statusMap = { select: "selected", reject: "rejected", shortlist: "shortlisted" };
         const patch = dispatch(
           eventsApi.util.updateQueryData("getApplicants", eventId, (draft) => {
-            const applicant = draft.data.find((a) => a.id === userId);
+            const applicant = draft.data.find((a) => a._id === userId);
             if (applicant && statusMap[action]) {
               applicant.status = statusMap[action];
             }

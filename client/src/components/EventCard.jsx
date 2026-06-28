@@ -1,4 +1,5 @@
 import { CalendarDays, Loader2, MapPin, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -18,8 +19,11 @@ export default function EventCard({
   isApplying = false,
   isWithdrawing = false,
 }) {
+  const navigate = useNavigate();
+
   if (!event) return null;
 
+  const eventId = event.id || event._id;
   const title = event.eventName || event.name || 'Untitled event';
   const city = event.location?.city || event.city || 'Unknown city';
   const status = event.status || 'open';
@@ -30,7 +34,10 @@ export default function EventCard({
   const isBusy = isApplying || isWithdrawing;
 
   return (
-    <Card className="overflow-hidden border-slate-100 shadow-sm">
+    <Card
+      onClick={() => eventId && navigate(`/events/${eventId}`)}
+      className="cursor-pointer overflow-hidden border-slate-100 shadow-sm transition-shadow hover:shadow-md"
+    >
       <CardContent className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -69,7 +76,10 @@ export default function EventCard({
           {applicationStatus === 'pending' ? (
             <button
               type="button"
-              onClick={() => onWithdraw?.(event)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onWithdraw?.(event);
+              }}
               disabled={isBusy}
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
             >
@@ -83,7 +93,10 @@ export default function EventCard({
           ) : (
             <button
               type="button"
-              onClick={() => onApply?.(event)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onApply?.(event);
+              }}
               disabled={isBusy}
               className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-70"
             >

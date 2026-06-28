@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import ConversationList from '@/components/messages/ConversationList';
 import ChatWindow from '@/components/messages/ChatWindow';
 import { useConversations } from '@/hooks/useConversations';
@@ -12,12 +13,14 @@ export default function MessagesPage() {
   const { user } = useSelector((state) => state.auth);
   const [activeConversation, setActiveConversation] = useState(null);
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // ── Real data hooks ──────────────────────────────────────────────────────
   const {
     conversations,
     isLoading: isLoadingConversations,
     updateConversation,
+    createConversation,
   } = useConversations();
 
   const {
@@ -104,6 +107,58 @@ export default function MessagesPage() {
     setShowChatOnMobile(false);
     setActiveConversation(null);
   };
+
+  // ── Deep-link support ────────────────────────────────────────────────────
+  // ?conversation=<id> — select an existing conversation (e.g. an event's
+  // group chat). ?with=<userId> — open/create a direct conversation with a
+  // specific user (e.g. "Message organiser" from EventDetail, or "Message"
+  // from a public profile).
+  useEffect(() => {
+    const conversationId = searchParams.get('conversation');
+    const withUserId = searchParams.get('with');
+    if (!conversationId && !withUserId) return;
+
+    let cancelled = false;
+
+    const openFromParams = async () => {
+      if (conversationId) {
+        const existing = conversations.find((c) => c._id === conversationId);
+        if (existing) {
+          handleSelectConversation(existing);
+        }
+        // If it's not in the list yet (e.g. brand-new group chat), it'll
+        // appear once the conversations list refetches — leave the param
+        // in place so this effect retries on the next render.
+        return;
+      }
+
+      if (withUserId) {
+        try {
+          const conversation = await createConversation(withUserId);
+          if (!cancelled && conversation) {
+            handleSelectConversation(conversation);
+          }
+        } catch (err) {
+          console.error('[MessagesPage] failed to open conversation', err);
+        }
+      }
+    };
+
+    openFromParams();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, conversations]);
+
+  // Once a conversation has been opened from the URL, clean the params so
+  // navigating around the page doesn't keep re-triggering this effect.
+  useEffect(() => {
+    if (activeConversation && (searchParams.get('conversation') || searchParams.get('with'))) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [activeConversation, searchParams, setSearchParams]);
 
   // ── Merge live unread counts into conversations for the sidebar ──────
   const conversationsWithUnread = conversations.map((conv) => ({

@@ -56,6 +56,8 @@ const requirementsSchema = new Schema(
       default: [],
     },
     requiredLanguages: { type: [String], default: [] },
+    dressCode: { type: String, trim: true, maxlength: 200 },
+    otherRequirements: { type: String, trim: true, maxlength: 1000 },
   },
   { _id: false }
 );

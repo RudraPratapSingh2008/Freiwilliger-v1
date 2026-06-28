@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ReviewCard } from "@/components/reviews/ReviewCard";
 
 // ---------------------------------------------------------------------------
 // Helpers / small pieces
@@ -80,55 +81,6 @@ function StarRating({ value = 0, size = "h-3.5 w-3.5" }) {
             }`}
         />
       ))}
-    </div>
-  );
-}
-
-function formatRelative(dateStr) {
-  if (!dateStr) return "";
-  const diffInSeconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diffInSeconds < 60) return "just now";
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  const days = Math.floor(diffInSeconds / 86400);
-  if (days === 1) return "yesterday";
-  if (days < 30) return `${days} days ago`;
-  return new Date(dateStr).toLocaleDateString();
-}
-
-function ReviewCard({ review }) {
-  // NOTE: shaped to match the actual GET /reviews/event/:eventId response
-  // (review.controller.js) — reviewerId is a populated User doc, the
-  // rating field is `stars` (not `rating`), and the date is `createdAt`
-  // (not a pre-formatted `date` string). The previous version expected
-  // review.authorName / review.rating / review.date, which don't exist
-  // on real review documents.
-  const reviewerName = review.reviewerId?.username || "Anonymous";
-
-  return (
-    <div className="rounded-xl border border-slate-100 p-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
-            {reviewerName[0]}
-          </div>
-          <p className="text-sm font-medium text-slate-700">{reviewerName}</p>
-        </div>
-        <StarRating value={review.stars} />
-      </div>
-      {review.comment && (
-        <p className="mt-2 text-sm text-slate-500">{review.comment}</p>
-      )}
-      <div className="mt-1.5 flex items-center gap-2">
-        {review.createdAt && (
-          <p className="text-xs text-slate-300">{formatRelative(review.createdAt)}</p>
-        )}
-        {review.isNoShow && (
-          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
-            No-show
-          </span>
-        )}
-      </div>
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import axios from "../../lib/axios";
+import { useGetUserReviewsQuery } from "@/api/reviewsApi";
+import { ReviewCard } from "@/components/reviews/ReviewCard";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -174,7 +176,17 @@ function AboutTab({ profile }) {
 
 // ─── Reviews Tab ──────────────────────────────────────────────────────────────
 
-function ReviewsTab({ reviews = [] }) {
+function ReviewsTab({ reviews = [], averageStars = 0, totalReviews = 0, isLoading = false }) {
+  if (isLoading) {
+    return (
+      <div className="pt-4 space-y-3">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+    );
+  }
+
   if (reviews.length === 0) {
     return (
       <div className="text-center py-10">
@@ -189,51 +201,22 @@ function ReviewsTab({ reviews = [] }) {
     );
   }
 
-  const avg = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
-
   return (
     <div className="pt-4 space-y-4">
       {/* Average */}
       <div className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl p-3">
-        <span className="text-3xl font-extrabold text-amber-600">{avg}</span>
+        <span className="text-3xl font-extrabold text-amber-600">{averageStars.toFixed(1)}</span>
         <div>
-          <StarRating rating={Math.round(parseFloat(avg))} />
-          <p className="text-xs text-gray-500 mt-0.5">{reviews.length} review{reviews.length !== 1 ? "s" : ""}</p>
+          <StarRating rating={Math.round(averageStars)} />
+          <p className="text-xs text-gray-500 mt-0.5">
+            {totalReviews} review{totalReviews !== 1 ? "s" : ""}
+          </p>
         </div>
       </div>
 
       {/* List */}
-      {reviews.map((review, idx) => (
-        <div key={review._id || idx} className="border border-gray-100 rounded-xl p-4">
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex items-center gap-2">
-              {review.reviewerAvatar ? (
-                <img src={review.reviewerAvatar} alt="" className="w-7 h-7 rounded-full object-cover" />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
-                  {review.reviewerName?.[0]?.toUpperCase() || "?"}
-                </div>
-              )}
-              <div>
-                <p className="text-xs font-semibold text-gray-800">{review.reviewerName || "Anonymous"}</p>
-                <p className="text-[10px] text-gray-400">
-                  {review.eventTitle || "Event"}
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <StarRating rating={review.rating} />
-              <p className="text-[10px] text-gray-400">
-                {review.createdAt
-                  ? new Date(review.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
-                  : ""}
-              </p>
-            </div>
-          </div>
-          {review.text && (
-            <p className="text-sm text-gray-600 leading-relaxed">{review.text}</p>
-          )}
-        </div>
+      {reviews.map((review) => (
+        <ReviewCard key={review._id} review={review} />
       ))}
     </div>
   );
@@ -356,6 +339,15 @@ export default function PublicProfile() {
   const [isFavourited, setFavourited] = useState(false);
   const [isInNetwork, setInNetwork]   = useState(false);
 
+  // profile.reviews from GET /profile/public/:username is always [] server-side
+  // (profile.controller.js hardcodes it as a placeholder) — fetch the real
+  // reviews from the dedicated endpoint instead.
+  const { data: reviewsRes, isFetching: reviewsLoading } = useGetUserReviewsQuery(
+    profile?._id,
+    { skip: !profile?._id }
+  );
+  const reviewsData = reviewsRes?.data || { reviews: [], averageStars: 0, totalReviews: 0 };
+
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true);
@@ -377,7 +369,7 @@ export default function PublicProfile() {
   }, [username]);
 
   const handleMessage = () => {
-    navigate(`/messages/${profile._id}`);
+    navigate(`/messages?with=${profile._id}`);
   };
 
   const handleAddNetwork = async () => {
@@ -520,7 +512,14 @@ export default function PublicProfile() {
 
         {/* ── Tab content ── */}
         {activeTab === "About"        && <AboutTab profile={profile} />}
-        {activeTab === "Reviews"      && <ReviewsTab reviews={profile.reviews} />}
+        {activeTab === "Reviews"      && (
+          <ReviewsTab
+            reviews={reviewsData.reviews}
+            averageStars={reviewsData.averageStars}
+            totalReviews={reviewsData.totalReviews}
+            isLoading={reviewsLoading}
+          />
+        )}
         {activeTab === "Work History" && <WorkHistoryTab history={profile.workHistory} />}
       </div>
 

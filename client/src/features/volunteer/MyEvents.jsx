@@ -10,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ReviewForm } from "@/components/reviews/ReviewForm";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -58,42 +59,6 @@ function StarRating({ value, onChange, readOnly = false }) {
           </button>
         );
       })}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// ReviewForm (inline, collapsible)
-// ---------------------------------------------------------------------------
-
-function ReviewForm({ onSubmit, isSubmitting }) {
-  const [stars, setStars] = useState(0);
-  const [text, setText] = useState("");
-
-  return (
-    <div className="space-y-3 rounded-xl bg-gray-50 p-3">
-      <div>
-        <p className="mb-1.5 text-xs font-medium text-gray-600">Your rating</p>
-        <StarRating value={stars} onChange={setStars} />
-      </div>
-      <div>
-        <p className="mb-1.5 text-xs font-medium text-gray-600">Your review</p>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="How was your experience at this event?"
-          rows={3}
-          className="w-full resize-none rounded-lg border border-gray-200 p-2.5 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-        />
-      </div>
-      <Button
-        size="sm"
-        disabled={stars === 0 || isSubmitting}
-        className="w-full bg-indigo-600 hover:bg-indigo-700"
-        onClick={() => onSubmit({ stars, text })}
-      >
-        {isSubmitting ? "Submitting..." : "Submit Review"}
-      </Button>
     </div>
   );
 }
@@ -231,17 +196,12 @@ function CompletedCard({ event, onSubmitReview, isSubmittingReview }) {
           {formOpen && (
             <div className="mt-2">
               <ReviewForm
+                eventId={event.id}
+                revieweeId={event.organiserId}
+                reviewerRole="volunteer"
+                revieweeRole="organiser"
                 isSubmitting={isSubmittingReview}
-                onSubmit={(review) =>
-                  // The backend (review.controller.js) requires revieweeId on
-                  // every submission. This is always the event's organiser
-                  // here, since a volunteer reviewing on this page can only
-                  // ever review the organiser they volunteered for.
-                  onSubmitReview(event.id, {
-                    ...review,
-                    revieweeId: event.organiserId,
-                  })
-                }
+                onSubmit={(payload) => onSubmitReview(event.id, payload)}
               />
             </div>
           )}

@@ -1,56 +1,126 @@
 import React from 'react';
-import { cn } from '@/lib/utils';
-import { Badge } from './badge';
+import { Star } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
+import { Badge } from '../ui/badge';
 
-const getTierColor = (score) => {
-  if (score >= 80) return 'bg-emerald-500 text-white';
-  if (score >= 60) return 'bg-blue-500 text-white';
-  if (score >= 40) return 'bg-amber-500 text-white';
-  if (score >= 20) return 'bg-orange-500 text-white';
-  return 'bg-red-500 text-white';
-};
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-const getTierLabel = (score, role) => {
-  const isVolunteer = role !== 'organiser';
-  if (score >= 80) return isVolunteer ? '🏆 Top Volunteer' : '🏆 Trusted Organiser';
-  if (score >= 60) return isVolunteer ? '✅ Reliable Volunteer' : '✅ Good Organiser';
-  if (score >= 40) return isVolunteer ? '🌱 Building Reputation' : '🌱 New Organiser';
-  if (score >= 20) return isVolunteer ? '⚠️ Needs Improvement' : '⚠️ Review Carefully';
-  return isVolunteer ? '🚫 Low Trust' : '🚫 Caution';
-};
+function formatRelative(dateStr) {
+  if (!dateStr) return '';
+  const diffInSeconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diffInSeconds < 60) return 'just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  const days = Math.floor(diffInSeconds / 86400);
+  if (days === 1) return 'yesterday';
+  if (days < 30) return `${days} days ago`;
+  return new Date(dateStr).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
-const sizeClasses = {
-  sm: 'w-6 h-6 text-xs',
-  md: 'w-9 h-9 text-sm',
-  lg: 'w-12 h-12 text-base',
-};
+function StarDisplay({ value = 0 }) {
+  const rounded = Math.round(value);
+  return (
+    <div className="flex items-center gap-0.5" aria-label={`${value} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star
+          key={i}
+          className={`h-3.5 w-3.5 ${
+            i <= rounded ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200'
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
 
-export function ScoreBadge({ score, role = 'volunteer', size = 'md', className }) {
-  const safeScore = Math.max(0, Math.min(100, Number(score) || 0));
-  const colorClass = getTierColor(safeScore);
-  const sizeClass = sizeClasses[size] || sizeClasses.md;
-  const label = getTierLabel(safeScore, role);
+// ---------------------------------------------------------------------------
+// ReviewCard
+// ---------------------------------------------------------------------------
+
+/**
+ * Displays a single review.
+ *
+ * Accepts the real shape returned by the backend (review.controller.js):
+ *   { reviewerId: { username, role, volunteerProfile, organiserProfile },
+ *     stars, comment, isNoShow, createdAt }
+ *
+ * Also tolerates a couple of looser aliases (`text`/`rating`/`noShow`) so it
+ * keeps working if it's fed data from a slightly different source — but the
+ * fields above are the ones the API actually sends.
+ */
+export function ReviewCard({ review }) {
+  if (!review) return null;
+
+  const reviewer = review.reviewerId || {};
+  const reviewerName =
+    reviewer.displayName ||
+    reviewer.volunteerProfile?.fullName ||
+    reviewer.organiserProfile?.companyName ||
+    reviewer.organiserProfile?.fullName ||
+    reviewer.username ||
+    review.reviewerName ||
+    'Anonymous';
+
+  const reviewerAvatar =
+    reviewer.displayPhoto ||
+    reviewer.volunteerProfile?.profilePhoto ||
+    reviewer.organiserProfile?.profilePhoto ||
+    reviewer.organiserProfile?.logo ||
+    review.reviewerAvatar ||
+    null;
+
+  const reviewerRole = reviewer.role || review.reviewerRole;
+  const stars = review.stars ?? review.rating ?? 0;
+  const comment = review.comment ?? review.text ?? '';
+  const isNoShow = review.isNoShow ?? review.noShow ?? false;
 
   return (
-    <div className="group relative inline-flex items-center justify-center">
-      <div
-        className={cn(
-          'flex items-center justify-center rounded-full font-bold shadow-sm',
-          colorClass,
-          sizeClass,
-          className
-        )}
-      >
-        {safeScore}
+    <div className="rounded-xl border border-slate-100 p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Avatar className="h-7 w-7">
+            <AvatarImage src={reviewerAvatar} alt={reviewerName} />
+            <AvatarFallback className="text-xs">
+              {reviewerName[0]?.toUpperCase() || '?'}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-medium text-slate-700">{reviewerName}</p>
+              {reviewerRole && (
+                <Badge
+                  variant="secondary"
+                  className="bg-slate-100 text-[10px] capitalize text-slate-500"
+                >
+                  {reviewerRole}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+        <StarDisplay value={stars} />
       </div>
 
-      {/* Tooltip */}
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
-        <div className="bg-slate-900 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
-          {label}
-        </div>
-        <div className="w-2 h-2 bg-slate-900 transform rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2"></div>
+      {comment && <p className="mt-2 text-sm text-slate-500">{comment}</p>}
+
+      <div className="mt-1.5 flex items-center gap-2">
+        {review.createdAt && (
+          <p className="text-xs text-slate-300">{formatRelative(review.createdAt)}</p>
+        )}
+        {isNoShow && (
+          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
+            No-show
+          </span>
+        )}
       </div>
     </div>
   );
 }
+
+export default ReviewCard;
