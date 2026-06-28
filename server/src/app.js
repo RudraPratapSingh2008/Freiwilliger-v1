@@ -4,6 +4,15 @@ const cors = require('cors')
 const rateLimit = require('express-rate-limit')
 const morgan = require('morgan')
 const cookieParser = require('cookie-parser')
+const Sentry = require('@sentry/node')
+
+// Initialize Sentry (conditional on SENTRY_DSN)
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+  });
+}
 
 // Route imports
 const authRoutes = require('./routes/auth.routes')
@@ -14,6 +23,10 @@ const messageRoutes = require('./routes/messages.routes')
 const reviewRoutes = require('./routes/reviews.routes')
 const networkRoutes = require('./routes/network.routes')
 const contactRequestRoutes = require('./routes/contactRequest.routes')
+const settingsRoutes = require('./routes/settings.routes')
+const supportRoutes = require('./routes/support.routes')
+const adminRoutes = require('./routes/admin.routes')
+const digilockerRoutes = require('./routes/digilocker.routes')
 
 
 const app = express()
@@ -39,6 +52,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 } ))
+
+// Trust proxy (required for correct client IP behind Render.com's proxy)
+app.set('trust proxy', 1)
 
 // Rate limiting
 const limiter = rateLimit({
@@ -72,6 +88,15 @@ app.use('/api/v1/messages', messageRoutes)
 app.use('/api/v1/reviews', reviewRoutes)
 app.use('/api/v1/network', networkRoutes)
 app.use('/api/v1/contact-requests', contactRequestRoutes)
+app.use('/api/v1/settings', settingsRoutes)
+app.use('/api/v1/support', supportRoutes)
+app.use('/api/v1/admin', adminRoutes)
+app.use('/api/v1/auth/digilocker', digilockerRoutes)
+
+// Sentry error handler (must be before other error handlers)
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {

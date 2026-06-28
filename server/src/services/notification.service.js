@@ -12,7 +12,44 @@
  * new_message notifications from the send:message handler.)
  */
 
+const { sendPushNotification } = require('./fcm.service');
+const User = require('../models/User.model');
+
 let io;
+
+// Brief in-memory cache for user notification prefs (avoids hitting DB on every notification)
+const prefsCache = new Map();
+const PREFS_CACHE_TTL = 60 * 1000; // 1 minute
+
+/**
+ * Maps notification types to the corresponding notificationPrefs key on the User model.
+ */
+const TYPE_TO_PREF_KEY = {
+    new_applicant: 'events',
+    selected: 'events',
+    rejected: 'events',
+    new_message: 'messages',
+    'score:updated': 'reviews',
+    'contact_request:received': 'contactRequests',
+    'contact_request:approved': 'contactRequests',
+};
+
+/**
+ * getUserNotificationPrefs(userId)
+ * Returns the notificationPrefs object for a user, using a short TTL cache.
+ */
+const getUserNotificationPrefs = async (userId) => {
+    const key = userId.toString();
+    const cached = prefsCache.get(key);
+    if (cached && Date.now() - cached.fetchedAt < PREFS_CACHE_TTL) {
+        return cached.prefs;
+    }
+
+    const user = await User.findById(userId).select('notificationPrefs').lean();
+    const prefs = user?.notificationPrefs || {};
+    prefsCache.set(key, { prefs, fetchedAt: Date.now() });
+    return prefs;
+};
 
 const setIO = (ioInstance) => {
     io = ioInstance;
@@ -89,4 +126,84 @@ const NOTIFICATION_TYPES = {
     CONTACT_REQUEST_APPROVED: 'contact_request:approved',
 };
 
-module.exports = { setIO, emitToUser, NOTIFICATION_TYPES };
+/**
+ * FCM push payload mapping.
+ * Maps notification types to human-readable push notification content.
+ */
+const FCM_PAYLOAD_MAP = {
+    [NOTIFICATION_TYPES.NEW_APPLICANT]: (data) => ({
+        title: 'New Applicant',
+        body: data.message || 'A volunteer has applied to your event.',
+    }),
+    [NOTIFICATION_TYPES.SELECTED]: (data) => ({
+        title: 'You\'re Selected!',
+        body: data.message || 'You have been selected for an event.',
+    }),
+    [NOTIFICATION_TYPES.REJECTED]: (data) => ({
+        title: 'Application Update',
+        body: data.message || 'Your application status has been updated.',
+    }),
+    [NOTIFICATION_TYPES.NEW_MESSAGE]: (data) => ({
+        title: 'New Message',
+        body: data.message || 'You have a new message.',
+    }),
+    [NOTIFICATION_TYPES.CONTACT_REQUEST_RECEIVED]: (data) => ({
+        title: 'Contact Request',
+        body: data.message || 'An organiser has requested your contact information.',
+    }),
+    [NOTIFICATION_TYPES.CONTACT_REQUEST_APPROVED]: (data) => ({
+        title: 'Contact Request Approved',
+        body: data.message || 'A volunteer has shared their contact information with you.',
+    }),
+};
+
+// Types that should trigger FCM push notifications
+const FCM_ENABLED_TYPES = [
+    NOTIFICATION_TYPES.NEW_APPLICANT,
+    NOTIFICATION_TYPES.SELECTED,
+    NOTIFICATION_TYPES.REJECTED,
+    NOTIFICATION_TYPES.NEW_MESSAGE,
+    NOTIFICATION_TYPES.CONTACT_REQUEST_RECEIVED,
+    NOTIFICATION_TYPES.CONTACT_REQUEST_APPROVED,
+];
+
+/**
+ * notifyUser(userId, type, data)
+ * Emits a socket event AND dispatches an FCM push notification (for eligible types).
+ * Respects user notification preferences — if the user has disabled the category
+ * for this notification type, both socket and FCM are skipped.
+ * This is the preferred entry point for sending notifications.
+ */
+const notifyUser = async (userId, type, data = {}) => {
+    // Check user notification preferences before sending
+    const prefKey = TYPE_TO_PREF_KEY[type];
+    if (prefKey) {
+        try {
+            const prefs = await getUserNotificationPrefs(userId);
+            if (prefs[prefKey] === false) {
+                // User has disabled this notification category — skip entirely
+                return;
+            }
+        } catch (err) {
+            // If we can't load prefs, default to sending the notification
+            console.error('[notification.service] Failed to load prefs for', userId, err.message);
+        }
+    }
+
+    // Emit socket event
+    emitToUser(userId, 'notification', { type, ...data, timestamp: new Date().toISOString() });
+
+    // Also dispatch FCM push for supported types
+    if (FCM_ENABLED_TYPES.includes(type) && FCM_PAYLOAD_MAP[type]) {
+        const { title, body } = FCM_PAYLOAD_MAP[type](data);
+        sendPushNotification(userId, {
+            title,
+            body,
+            data: { type, ...(data.resourceId ? { resourceId: String(data.resourceId) } : {}) },
+        }).catch((err) => {
+            console.error('[notification.service] FCM dispatch error:', err.message);
+        });
+    }
+};
+
+module.exports = { setIO, emitToUser, notifyUser, NOTIFICATION_TYPES };

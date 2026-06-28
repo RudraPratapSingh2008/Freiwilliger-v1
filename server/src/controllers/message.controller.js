@@ -60,9 +60,21 @@ const createConversation = async (req, res) => {
             return errorResponse(res, 'Cannot start a conversation with yourself', 400);
         }
 
-        const participant = await User.findById(participantId).select('_id');
+        const participant = await User.findById(participantId).select('_id blockedUsers');
         if (!participant) {
             return errorResponse(res, 'User not found', 404);
+        }
+
+        // Check if either user has blocked the other
+        const currentUser = await User.findById(userId).select('blockedUsers');
+        const senderBlockedRecipient = currentUser?.blockedUsers?.some(
+            (id) => id.toString() === participantId.toString()
+        );
+        const recipientBlockedSender = participant?.blockedUsers?.some(
+            (id) => id.toString() === userId.toString()
+        );
+        if (senderBlockedRecipient || recipientBlockedSender) {
+            return errorResponse(res, 'Cannot send message to this user', 403);
         }
 
         // NOTE: visibilityPrefs ("Who can message me") isn't enforced yet — that

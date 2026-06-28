@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
+const { registerToken } = require('../controllers/fcmToken.controller');
+const { getMyReferral, applyReferral } = require('../controllers/referral.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 const { uploadProfilePhoto, uploadIdDocument } = require('../middleware/upload.middleware');
 
@@ -26,6 +28,13 @@ router.get('/me/score-history', userController.getScoreHistory);
 router.post('/me/photo', uploadProfilePhoto, userController.uploadPhoto);
 router.post('/me/id-document', uploadIdDocument, userController.uploadIdDocument);
 router.post('/me/company-logo', uploadProfilePhoto, userController.uploadCompanyLogo);
+
+// FCM push notification token registration
+router.post('/me/fcm-token', registerToken);
+
+// Referral system
+router.get('/me/referral', getMyReferral);
+router.post('/me/referral', applyReferral);
 
 // Public profile routes
 router.get('/search', userController.searchUsers);

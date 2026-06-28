@@ -111,6 +111,7 @@ const uploadIdDocument = (req, res, next) => {
 };
 
 module.exports = {
+  upload,
   uploadProfilePhoto,
   uploadIdDocument
 };

@@ -17,6 +17,7 @@ import {
 import FilterDrawer, { DEFAULT_FILTERS } from "@/components/FilterDrawer";
 import EventCard from "@/components/EventCard";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import StateDiscovery from "./StateDiscovery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -431,6 +432,11 @@ export default function VolunteerDashboard({
             ))}
           </div>
         )}
+
+        {/* State Discovery Section */}
+        <div className="mt-8 pt-6 border-t border-gray-100">
+          <StateDiscovery />
+        </div>
       </main>
 
       <BottomNav active={activeNav} onNavigate={handleNavigate} />

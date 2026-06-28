@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { ShieldCheck } from "lucide-react";
 import axios from "../../lib/axios";
 import { useGetUserReviewsQuery } from "@/api/reviewsApi";
 import { ReviewCard } from "@/components/reviews/ReviewCard";
+import ProfileCompleteness from "../../components/ProfileCompleteness";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -455,9 +457,14 @@ export default function PublicProfile() {
 
           {/* Name / username / meta */}
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-extrabold text-gray-900 leading-tight truncate">
-              {profile.name || profile.username}
-            </h1>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-lg font-extrabold text-gray-900 leading-tight truncate">
+                {profile.name || profile.username}
+              </h1>
+              {profile.idVerificationStatus === 'verified' && (
+                <ShieldCheck className="h-4.5 w-4.5 text-green-600 shrink-0" aria-label="Verified" />
+              )}
+            </div>
             <p className="text-xs text-gray-400 font-medium mb-2">@{profile.username}</p>
 
             {/* Score badge */}
@@ -492,6 +499,11 @@ export default function PublicProfile() {
             </div>
           ))}
         </div>
+
+        {/* ── Profile Completeness (own profile only) ── */}
+        {isOwnProfile && (
+          <ProfileCompleteness user={profile} isOwnProfile={isOwnProfile} />
+        )}
 
         {/* ── Tabs ── */}
         <div className="flex bg-gray-100 rounded-xl p-1 mb-1">

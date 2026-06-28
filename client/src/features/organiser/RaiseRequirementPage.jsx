@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import RaiseRequirement from "./RaiseRequirement";
 import { useCreateEventMutation } from "@/api/eventsApi";
 import useGeolocation from "@/hooks/useGeolocation";
+import * as analytics from "../../services/analytics";
 
 // Wizard offers 4 payment options; the server schema only stores 2
 // (paid | unpaid | certificate | stipend) plus a free-text `notes` field —
@@ -81,6 +82,7 @@ export default function RaiseRequirementPage() {
 
     try {
       await createEvent(mapFormToPayload(form, location)).unwrap();
+      analytics.track('event_created', { category: form.category });
       navigate("/dashboard");
     } catch (err) {
       const message = err?.data?.message || "Failed to publish event. Please check your details and try again.";

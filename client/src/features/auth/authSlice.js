@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import * as analytics from '../../services/analytics';
 
 const initialState = {
   user: null,       // { _id, username, name, role, profilePhotoUrl, location }
@@ -19,6 +20,11 @@ const authSlice = createSlice({
       state.accessToken = action.payload.accessToken;
       state.isAuthenticated = true;
       state.error = null;
+      // Identify user in analytics
+      const user = action.payload.user;
+      if (user?._id) {
+        analytics.identify(user._id, { role: user.role, city: user.location?.city });
+      }
     },
     setLoading: (state, action) => {
       state.loading = action.payload;
@@ -41,6 +47,9 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.loading = false;
       state.error = null;
+      // Reset analytics on logout
+      analytics.reset();
+      analytics.track('user_logged_out');
     },
   },
 });

@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { ShieldCheck, Loader2 } from 'lucide-react';
 import axios from '../../lib/axios';
 import { updateUser } from '../auth/authSlice';
+import { startVerification } from '../../services/digilocker';
 import VolunteerProfileSetup from './VolunteerProfileSetup';
 
 const normalizeOtherSkills = (freeText) => {
@@ -18,6 +20,20 @@ export default function VolunteerProfileSetupPage() {
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [digiLockerLoading, setDigiLockerLoading] = useState(false);
+  const user = useSelector((state) => state.auth.user);
+  const verificationStatus = user?.idVerificationStatus || 'none';
+
+  const handleDigiLockerVerify = async () => {
+    setDigiLockerLoading(true);
+    try {
+      await startVerification();
+    } catch {
+      // silent — popup handles flow
+    } finally {
+      setDigiLockerLoading(false);
+    }
+  };
 
   const handleComplete = async (formData) => {
     setIsLoading(true);
@@ -81,6 +97,37 @@ export default function VolunteerProfileSetupPage() {
       )}
       <div className={isLoading ? 'pointer-events-none opacity-70' : ''}>
         <VolunteerProfileSetup onComplete={handleComplete} />
+      </div>
+
+      {/* DigiLocker Verification Section */}
+      <div className="max-w-md mx-auto px-4 pb-8">
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldCheck className="h-5 w-5 text-violet-600" />
+            <span className="text-sm font-semibold text-gray-800">Identity Verification</span>
+          </div>
+          {verificationStatus === 'verified' ? (
+            <div className="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg px-3 py-2">
+              <ShieldCheck className="h-4 w-4" />
+              <span className="text-sm font-medium">Verified with DigiLocker</span>
+            </div>
+          ) : verificationStatus === 'pending' ? (
+            <div className="flex items-center gap-2 text-yellow-700 bg-yellow-50 rounded-lg px-3 py-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm font-medium">Verification Pending</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleDigiLockerVerify}
+              disabled={digiLockerLoading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 transition-colors"
+            >
+              {digiLockerLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+              {verificationStatus === 'failed' ? 'Retry Verification' : 'Verify with DigiLocker'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

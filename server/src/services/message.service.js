@@ -1,9 +1,30 @@
 const Conversation = require('../models/Conversation.model');
 const Message = require('../models/Message.model');
+const User = require('../models/User.model');
 const { emitToUser, NOTIFICATION_TYPES } = require('./notification.service');
 
 const isParticipant = (conversation, userId) =>
     conversation.participants.some((p) => p.toString() === userId.toString());
+
+/**
+ * checkBlocked(senderId, recipientId)
+ * Returns true if either user has blocked the other.
+ */
+const checkBlocked = async (senderId, recipientId) => {
+    const [sender, recipient] = await Promise.all([
+        User.findById(senderId).select('blockedUsers').lean(),
+        User.findById(recipientId).select('blockedUsers').lean(),
+    ]);
+
+    const senderBlocked = sender?.blockedUsers?.some(
+        (id) => id.toString() === recipientId.toString()
+    );
+    const recipientBlocked = recipient?.blockedUsers?.some(
+        (id) => id.toString() === senderId.toString()
+    );
+
+    return senderBlocked || recipientBlocked;
+};
 
 /**
  * saveMessage({ conversationId, senderId, text, attachments })
@@ -38,6 +59,21 @@ const saveMessage = async ({ conversationId, senderId, text, attachments = [] })
         const err = new Error('Not a participant of this conversation');
         err.statusCode = 403;
         throw err;
+    }
+
+    // Check if either user has blocked the other (direct conversations only)
+    if (conversation.type === 'direct' && conversation.participants.length === 2) {
+        const recipientId = conversation.participants.find(
+            (p) => p.toString() !== senderId.toString()
+        );
+        if (recipientId) {
+            const blocked = await checkBlocked(senderId, recipientId);
+            if (blocked) {
+                const err = new Error('Cannot send message to this user');
+                err.statusCode = 403;
+                throw err;
+            }
+        }
     }
 
     const message = await Message.create({

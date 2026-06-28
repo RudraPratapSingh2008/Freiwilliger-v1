@@ -8,6 +8,7 @@ import {
   useWithdrawApplicationMutation,
 } from "@/api/eventsApi";
 import { useGetUserReviewsQuery } from "@/api/reviewsApi";
+import * as analytics from "../../services/analytics";
 
 // ---------------------------------------------------------------------------
 // Helpers — map the nested server Event shape to the flat props EventDetail
@@ -165,7 +166,7 @@ export default function EventDetailPage() {
       }
       onSave={() => setIsSaved((prev) => !prev)}
       onMessage={() => organiser?.id && navigate(`/messages?with=${organiser.id}`)}
-      onApply={() => applyToEvent(eventId)}
+      onApply={() => { applyToEvent(eventId); analytics.track('event_applied', { eventId }); }}
       onWithdraw={() => withdrawApplication(eventId)}
     />
   );

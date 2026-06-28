@@ -28,6 +28,9 @@ const verifyToken = (req, res, next) => {
       username: decoded.username,
     };
 
+    // Tag the authenticated user in Sentry for error context
+    try { const Sentry = require('@sentry/node'); Sentry.setUser({ id: decoded._id }); } catch (e) { /* Sentry optional */ }
+
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {

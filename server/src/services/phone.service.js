@@ -1,6 +1,7 @@
 const admin = require("../config/firebase.admin");
 const nodemailer = require("nodemailer");
 const bcrypt = require("bcryptjs");
+const emailVerificationTemplate = require("../templates/emailVerification");
 
 // In a real application, you would interact with a database for OTP storage
 const otpStore = {}; // { email: { otpHash, expiresAt, purpose } }
@@ -42,7 +43,7 @@ const sendEmailOtp = async (email, purpose) => {
     from: process.env.EMAIL_USER,
     to: email,
     subject: `Freiwilliger OTP for ${purpose}`,
-    text: `Your OTP for Freiwilliger is: ${otp}. It is valid for 10 minutes.`,
+    html: emailVerificationTemplate(otp),
   };
 
   try {

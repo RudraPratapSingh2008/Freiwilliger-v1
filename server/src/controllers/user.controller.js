@@ -386,17 +386,32 @@ exports.getUserByUsername = async (req, res) => {
  */
 exports.searchUsers = async (req, res) => {
   try {
-    const { q } = req.query;
+    const { q, role } = req.query;
     if (!q) return successResponse(res, [], 'Empty search');
 
-    const users = await User.find({
+    // Load the authenticated user's blocked list
+    const currentUser = await User.findById(req.user._id).select('blockedUsers');
+
+    // Build exclusion list: blocked users + the searching user themselves
+    const excludedIds = [...(currentUser.blockedUsers || []), req.user._id];
+
+    // Build the query filter
+    const filter = {
       $or: [
         { username: { $regex: q, $options: 'i' } },
         { 'volunteerProfile.fullName': { $regex: q, $options: 'i' } },
         { 'organiserProfile.companyName': { $regex: q, $options: 'i' } },
         { 'organiserProfile.fullName': { $regex: q, $options: 'i' } }
-      ]
-    }).limit(20);
+      ],
+      _id: { $nin: excludedIds }
+    };
+
+    // Optional role filter
+    if (role && (role === 'volunteer' || role === 'organiser')) {
+      filter.role = role;
+    }
+
+    const users = await User.find(filter).limit(20);
 
     const filteredUsers = users.map(u => filterProfileForViewer(u, req.user.role));
     return successResponse(res, filteredUsers, 'Search results');

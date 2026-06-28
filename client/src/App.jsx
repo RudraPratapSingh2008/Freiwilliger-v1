@@ -1,5 +1,10 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+
+// ── Analytics & FCM ──────────────────────────────────────────────────────────
+import * as analytics from "./services/analytics";
+import { requestNotificationPermission } from "./services/fcm";
 
 // ── Auth Pages ───────────────────────────────────────────────────────────────
 import LoginPage from "./features/auth/LoginPage";
@@ -22,12 +27,46 @@ import EventDetailPage from "./features/volunteer/EventDetailPage";
 import MyEventsPage from "./features/volunteer/MyEventsPage";
 import RaiseRequirementPage from "./features/organiser/RaiseRequirementPage";
 import ApplicantListPage from "./features/organiser/ApplicantListPage";
+import EventManagementPage from "./features/organiser/EventManagementPage";
+
+// ── Network ──────────────────────────────────────────────────────────────────
+import NetworkPage from "./features/network/NetworkPage";
+
+// ── Settings ─────────────────────────────────────────────────────────────────
+import SettingsPage from "./features/settings/SettingsPage";
+import NotificationPrefsPage from "./features/settings/NotificationPrefsPage";
+import VisibilitySettingsPage from "./features/settings/VisibilitySettingsPage";
+import DataPrivacyPage from "./features/settings/DataPrivacyPage";
+
+// ── Help ─────────────────────────────────────────────────────────────────────
+import HelpCentrePage from "./features/help/HelpCentrePage";
+
+// ── Legal ────────────────────────────────────────────────────────────────────
+import TermsPage from "./features/legal/TermsPage";
+import PrivacyPolicyPage from "./features/legal/PrivacyPolicyPage";
+import CommunityGuidelinesPage from "./features/legal/CommunityGuidelinesPage";
+
+// ── Volunteer ────────────────────────────────────────────────────────────────
+import ContactRequestReviewPage from "./features/volunteer/ContactRequestReviewPage";
+
+// ── Admin ────────────────────────────────────────────────────────────────────
+import AdminRoute from "./components/routing/AdminRoute";
+import AdminLayout from "./features/admin/AdminLayout";
+import AdminOverviewPage from "./features/admin/AdminOverviewPage";
+import AdminUsersPage from "./features/admin/AdminUsersPage";
+import AdminReportsPage from "./features/admin/AdminReportsPage";
+import AdminContactRequestsPage from "./features/admin/AdminContactRequestsPage";
+
+// ── PWA ───────────────────────────────────────────────────────────────────────
+import InstallPrompt from "./components/InstallPrompt";
+
+// ── UI Enhancements ──────────────────────────────────────────────────────────
+import OfflineIndicator from "./components/OfflineIndicator";
+import ToastProvider from "./components/ToastProvider";
 
 // ── Route Guards ─────────────────────────────────────────────────────────────
 import { ProtectedRoute, RoleRoute } from "./components/routing/ProtectedRoute";
 
-// SettingsPage below is still a stub — replace when that page is built.
-// TODO: Replace SettingsPage stub with a real component when available.
 function DashboardRouter() {
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
@@ -45,8 +84,7 @@ function DashboardRouter() {
         onNavigate={(key) => {
           if (key === "myEvents") navigate("/my-events");
           else if (key === "home") navigate("/dashboard");
-          // "network" has no page built yet anywhere in this app —
-          // intentionally left unwired rather than pointing at a 404.
+          else if (key === "network") navigate("/network");
         }}
       />
     );
@@ -55,22 +93,27 @@ function DashboardRouter() {
   return <Navigate to="/role-selection" replace />;
 }
 
-function SettingsPage() {
-  return (
-    <div className="min-h-screen flex items-center justify-center text-gray-700">
-      Settings
-    </div>
-  );
-}
-
 export default function App() {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
+
+  // Initialize Mixpanel analytics
+  useEffect(() => {
+    analytics.init(import.meta.env.VITE_MIXPANEL_TOKEN);
+  }, []);
+
+  // Request FCM notification permission when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      requestNotificationPermission();
+    }
+  }, [isAuthenticated]);
 
   // After registration, if role isn't set yet → force role selection
   const needsRoleSelection = isAuthenticated && !user?.role;
 
   return (
     <BrowserRouter>
+      <OfflineIndicator />
       <Routes>
 
         {/* ── Public root: redirect authenticated users to dashboard ── */}
@@ -124,7 +167,12 @@ export default function App() {
 
           <Route path="/dashboard"          element={<DashboardRouter />} />
           <Route path="/messages"           element={<MessagesPage />} />
-          <Route path="/settings/*"         element={<SettingsPage />} />
+          <Route path="/network"            element={<NetworkPage />} />
+          <Route path="/settings"           element={<SettingsPage />} />
+          <Route path="/settings/notifications" element={<NotificationPrefsPage />} />
+          <Route path="/settings/visibility"    element={<VisibilitySettingsPage />} />
+          <Route path="/settings/data-privacy"  element={<DataPrivacyPage />} />
+          <Route path="/help"               element={<HelpCentrePage />} />
 
           {/* Public profile — any logged-in user can view */}
           <Route path="/profile/:username"  element={<PublicProfile />} />
@@ -141,16 +189,33 @@ export default function App() {
           <Route element={<RoleRoute requiredRole="organiser" />}>
             <Route path="/post-event" element={<RaiseRequirementPage />} />
             <Route path="/events/:eventId/applicants" element={<ApplicantListPage />} />
+            <Route path="/events/:eventId/manage" element={<EventManagementPage />} />
           </Route>
 
           {/* ── Volunteer-only routes ── */}
           <Route element={<RoleRoute requiredRole="volunteer" />}>
             <Route path="/my-events" element={<MyEventsPage />} />
+            <Route path="/contact-requests/:requestId/review" element={<ContactRequestReviewPage />} />
           </Route>
 
           {/* ── Shared event detail route (any authenticated user) ── */}
           <Route path="/events/:eventId" element={<EventDetailPage />} />
+
+          {/* ── Admin routes ── */}
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminOverviewPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="reports" element={<AdminReportsPage />} />
+              <Route path="contact-requests" element={<AdminContactRequestsPage />} />
+            </Route>
+          </Route>
         </Route>
+
+        {/* ── Legal pages (public — accessible with or without login) ── */}
+        <Route path="/terms"                element={<TermsPage />} />
+        <Route path="/privacy-policy"       element={<PrivacyPolicyPage />} />
+        <Route path="/community-guidelines" element={<CommunityGuidelinesPage />} />
 
         {/* ── 404 catch-all ── */}
         <Route
@@ -167,6 +232,8 @@ export default function App() {
         />
 
       </Routes>
+      <ToastProvider />
+      <InstallPrompt />
     </BrowserRouter>
   );
 }

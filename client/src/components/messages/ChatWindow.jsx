@@ -12,6 +12,7 @@ import {
 import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
 import { cn } from '@/lib/utils';
+import * as analytics from '../../services/analytics';
 
 export default function ChatWindow({
   conversation,
@@ -49,6 +50,7 @@ export default function ChatWindow({
       timestamp: new Date(),
     });
 
+    analytics.track('message_sent');
     setMessageText('');
     inputRef.current?.focus();
   };

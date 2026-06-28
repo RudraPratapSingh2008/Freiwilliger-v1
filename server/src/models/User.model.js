@@ -86,6 +86,15 @@ const volunteerProfileSchema = new Schema(
     helpScore: { type: Number, default: 50, min: 0, max: 100 },
     scoreHistory: [scoreHistorySchema],
 
+    // Volunteer availability schedule
+    availability: [
+      {
+        day: { type: String, enum: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] },
+        startTime: { type: String },
+        endTime: { type: String },
+      },
+    ],
+
     // Favourite events (ObjectId refs to Event)
     favouriteEvents: [{ type: Schema.Types.ObjectId, ref: 'Event' }],
 
@@ -138,6 +147,17 @@ const visibilityPrefsSchema = new Schema(
   { _id: false }
 );
 
+const notificationPrefsSchema = new Schema(
+  {
+    events: { type: Boolean, default: true },
+    messages: { type: Boolean, default: true },
+    reviews: { type: Boolean, default: true },
+    network: { type: Boolean, default: true },
+    contactRequests: { type: Boolean, default: true },
+  },
+  { _id: false }
+);
+
 // ─── Root user schema ────────────────────────────────────────────────────────
 
 const userSchema = new Schema(
@@ -172,14 +192,19 @@ const userSchema = new Schema(
 
     role: {
       type: String,
-      enum: ['volunteer', 'organiser'],
+      enum: ['volunteer', 'organiser', 'admin'],
       required: [true, 'Role is required'],
     },
+
+    preferredLanguage: { type: String, enum: ['en', 'hi'], default: 'en' },
 
     isPhoneVerified: { type: Boolean, default: false },
 
     // Refresh token rotation — store hashed tokens
     refreshTokens: { type: [String], select: false },
+
+    // FCM push notification tokens
+    fcmTokens: [{ type: String, trim: true }],
 
     // GeoJSON Point for $near queries — index added below
     location: {
@@ -206,10 +231,40 @@ const userSchema = new Schema(
       default: () => ({}),
     },
 
+    idVerificationStatus: {
+      type: String,
+      enum: ['none', 'pending', 'verified', 'failed'],
+      default: 'none',
+    },
+
+    aadhaarData: {
+      lastFourDigits: { type: String },
+      name: { type: String },
+      dob: { type: String },
+      gender: { type: String },
+      photo: { type: String },
+      verifiedAt: { type: Date },
+    },
+
     visibilityPrefs: {
       type: visibilityPrefsSchema,
       default: () => ({}),
     },
+
+    notificationPrefs: {
+      type: notificationPrefsSchema,
+      default: () => ({}),
+    },
+
+    blockedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+
+    accountStatus: {
+      type: String,
+      enum: ['active', 'deletion_requested', 'deleted'],
+      default: 'active',
+    },
+
+    deletionRequestedAt: { type: Date, default: null },
 
     // Network connections
     network: [
@@ -220,6 +275,11 @@ const userSchema = new Schema(
     ],
 
     favouriteUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+
+    // Referral system
+    referralCode: { type: String, unique: true, sparse: true },
+    referredBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    referralCount: { type: Number, default: 0 },
 
     isActive: { type: Boolean, default: true },
     isBanned: { type: Boolean, default: false },
@@ -235,6 +295,15 @@ const userSchema = new Schema(
 
 userSchema.index({ location: '2dsphere' });
 userSchema.index({ role: 1, isActive: 1 });
+userSchema.index(
+  {
+    username: 'text',
+    'volunteerProfile.fullName': 'text',
+    'organiserProfile.companyName': 'text',
+    'organiserProfile.fullName': 'text',
+  },
+  { name: 'user_text_search' }
+);
 
 // ─── Virtuals ────────────────────────────────────────────────────────────────
 

@@ -1,0 +1,145 @@
+[
+  {
+    "category": "Getting Started",
+    "items": [
+      {
+        "question": "What is Freiwilliger?",
+        "answer": "Freiwilliger is a platform that connects volunteers with event organisers. Whether you want to help out at community events or find reliable volunteers for your project, Freiwilliger makes it easy to connect, communicate, and collaborate."
+      },
+      {
+        "question": "How do I sign up?",
+        "answer": "Tap 'Register' on the landing page, enter your email and create a password. You'll then choose your role — Volunteer or Organiser — and complete a short profile setup. You can start browsing events immediately after registration."
+      },
+      {
+        "question": "How do I set up my profile?",
+        "answer": "After signing up, go to your profile page and fill in your details — name, city, photo, and a short bio. Volunteers can add skills and availability. Organisers can add their company name and description. A complete profile helps others find and trust you."
+      },
+      {
+        "question": "Can I be both a Volunteer and an Organiser?",
+        "answer": "Currently each account is tied to a single role chosen during onboarding. If you need both roles, you can create a separate account with a different email address."
+      }
+    ]
+  },
+  {
+    "category": "For Volunteers",
+    "items": [
+      {
+        "question": "How do I find events to volunteer for?",
+        "answer": "Use the dashboard to browse upcoming events in your area. You can filter by category, date, location, and whether the event is paid or unpaid. Tap any event card to see full details and apply."
+      },
+      {
+        "question": "How does the Help Score work?",
+        "answer": "Your Help Score reflects your reliability and quality as a volunteer. It increases when you attend events, receive positive reviews, and complete tasks. It decreases for no-shows or negative feedback. A higher score makes you more attractive to organisers."
+      },
+      {
+        "question": "Can I cancel after applying to an event?",
+        "answer": "Yes, you can withdraw your application before the organiser accepts you. Once accepted, cancelling may affect your Help Score depending on how close to the event date you cancel. Always communicate with the organiser if plans change."
+      },
+      {
+        "question": "How do I get reviews?",
+        "answer": "After an event ends, the organiser can leave a review about your participation. You'll receive a notification when a review is posted. Consistent positive reviews help boost your Help Score."
+      }
+    ]
+  },
+  {
+    "category": "For Organisers",
+    "items": [
+      {
+        "question": "How do I post an event?",
+        "answer": "From your Organiser Dashboard, tap 'Create Event'. Fill in the event title, description, date, location, and how many volunteers you need. You can also specify required skills and whether the event is paid or unpaid."
+      },
+      {
+        "question": "How do I select volunteers?",
+        "answer": "When volunteers apply to your event, you'll see them in your applicant list. Review their profiles, Help Scores, and past reviews to decide. You can accept or decline each applicant individually."
+      },
+      {
+        "question": "What is the Hire Score?",
+        "answer": "The Hire Score reflects your reputation as an organiser. It increases when you host successful events, treat volunteers well, and receive positive feedback. Volunteers check this score when deciding whether to apply to your events."
+      },
+      {
+        "question": "Can I edit or cancel a posted event?",
+        "answer": "Yes, you can edit event details anytime before the event starts. If you need to cancel, notify accepted volunteers first. Frequent cancellations may negatively affect your Hire Score."
+      }
+    ]
+  },
+  {
+    "category": "Payments",
+    "items": [
+      {
+        "question": "Is volunteering always free?",
+        "answer": "Most events on Freiwilliger are unpaid volunteer opportunities. However, organisers can mark events as paid if they offer compensation. The event listing clearly shows whether an event is paid or unpaid."
+      },
+      {
+        "question": "What about paid events?",
+        "answer": "Some organisers offer paid opportunities for skilled volunteers. Payment terms are set by the organiser and shown on the event page. Make sure to review the details before applying."
+      },
+      {
+        "question": "How do I receive payment for paid events?",
+        "answer": "Payment arrangements are handled directly between the organiser and volunteer. Freiwilliger facilitates the connection but does not process payments. Confirm payment details with the organiser before the event."
+      }
+    ]
+  },
+  {
+    "category": "Scores & Reviews",
+    "items": [
+      {
+        "question": "How is my score calculated?",
+        "answer": "Your score is based on event attendance, reviews from other users, and reliability history. Positive actions like attending events and getting good reviews increase it. Negative actions like no-shows decrease it. You can view your score history on your profile."
+      },
+      {
+        "question": "Can I dispute a review?",
+        "answer": "If you believe a review is unfair or violates community guidelines, you can report it through the Help Centre. Our team will review the report and take appropriate action. Reviews that contain abuse or false information may be removed."
+      },
+      {
+        "question": "What is the no-show penalty?",
+        "answer": "If you're accepted to an event and don't attend without prior notice, your score will be reduced. The penalty amount depends on how late the no-show is. Communicating cancellations early reduces the impact."
+      },
+      {
+        "question": "Can I see my score history?",
+        "answer": "Yes, your profile includes a Score History timeline showing every score change with the reason, date, and associated event. This helps you understand what actions affect your score."
+      }
+    ]
+  },
+  {
+    "category": "Privacy",
+    "items": [
+      {
+        "question": "Who can see my profile?",
+        "answer": "By default, your profile is visible to other registered users. You can adjust visibility settings to control what information is shown. Go to Settings > Visibility to manage your preferences."
+      },
+      {
+        "question": "How do I block someone?",
+        "answer": "Visit the user's profile and tap the Block option. Blocked users cannot see your profile, send you messages, or appear in your search results. You can unblock them anytime from Settings."
+      },
+      {
+        "question": "Is my phone number visible to others?",
+        "answer": "No, your phone number is never shown publicly. Contact information is only shared through the Contact Request system, which requires your explicit approval before any details are revealed."
+      },
+      {
+        "question": "How do I delete my account?",
+        "answer": "Go to Settings > Data & Privacy and select 'Delete Account'. Your account will be marked for deletion and permanently removed after a grace period. You can cancel the request during this period."
+      }
+    ]
+  },
+  {
+    "category": "Technical",
+    "items": [
+      {
+        "question": "The app is not loading. What should I do?",
+        "answer": "First, check your internet connection. Then try refreshing the page or clearing your browser cache. If the problem persists, try a different browser or device. You can also report the issue through our Help Centre."
+      },
+      {
+        "question": "How do I clear my browser cache?",
+        "answer": "In Chrome: Settings > Privacy and Security > Clear Browsing Data. In Firefox: Settings > Privacy & Security > Clear Data. In Safari: Preferences > Privacy > Manage Website Data. After clearing, reload the app."
+      },
+      {
+        "question": "Which browsers are supported?",
+        "answer": "Freiwilliger works best on the latest versions of Chrome, Firefox, Safari, and Edge. We recommend keeping your browser updated for the best experience. Internet Explorer is not supported."
+      },
+      {
+        "question": "How do I enable notifications?",
+        "answer": "When prompted by your browser, allow notifications from Freiwilliger. If you previously denied permission, go to your browser's site settings and enable notifications for our domain. You can customise which notifications you receive in Settings."
+      }
+    ]
+  }
+]

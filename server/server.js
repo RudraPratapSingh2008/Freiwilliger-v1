@@ -19,6 +19,8 @@ const startServer = async () => {
   // Register cron jobs (they self-schedule via node-cron)
   require('./src/jobs/reviewWindow.job')
   require('./src/jobs/scoreUpdater.job')
+  require('./src/jobs/accountDeletion.job')
+  require('./src/jobs/eventReminder.job')
 
   httpServer.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`)

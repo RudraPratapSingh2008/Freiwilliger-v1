@@ -1,198 +1,177 @@
-# Freiwilliger — Volunteer Event Platform for India
+# 🤝 Freiwilliger
 
-A full-stack MERN application connecting volunteers with opportunities to support events across India.
+A full-stack volunteer event platform for India, connecting volunteers with event organisers.
 
-## Project Structure
+Built with the MERN stack: MongoDB, Express.js, React 18, Node.js 20.
+
+## ✨ Features
+
+- **Phone OTP authentication** via Firebase
+- **Location-based event discovery** (MongoDB $near, 50km radius)
+- **Real-time messaging** via Socket.io (DMs + event group chats)
+- **Volunteer scoring system** (Help Score 0–100, daily cron job)
+- **Contact request flow** (privacy-first: phone/email never exposed)
+- **QR code event check-in**
+- **PDF volunteer certificates**
+- **Admin moderation dashboard**
+- **Aadhaar e-KYC** via DigiLocker
+- **PWA** with offline support
+- **Hindi language support** (i18n)
+- **Dark mode**
+- **FCM push notifications**
+- **Sentry error monitoring**
+- **Mixpanel analytics**
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite, Tailwind CSS, shadcn/ui, Redux Toolkit, RTK Query |
+| Backend | Node.js 20, Express.js 4, Mongoose 8, Socket.io |
+| Database | MongoDB Atlas (M0 free tier) |
+| Auth | Firebase Phone Auth + custom JWT |
+| Storage | Cloudinary (images) |
+| Real-time | Socket.io (namespaces: /chat, /notify) |
+| Deployment | Render.com (backend) + Vercel (frontend) |
+| CI/CD | GitHub Actions |
+
+## 📦 Project Structure
 
 ```
 freiwilliger/
-├── client/          # React 18 + Vite + Tailwind CSS + Redux
-├── server/          # Node.js + Express + MongoDB + Socket.io
-└── README.md
+├── client/           # React frontend (Vite)
+│   ├── public/       # Static assets, PWA icons, locales
+│   └── src/
+│       ├── api/      # RTK Query API slices
+│       ├── app/      # Redux store
+│       ├── components/  # Shared UI components
+│       ├── features/ # Feature modules (auth, admin, volunteer, organiser, etc.)
+│       ├── hooks/    # Custom React hooks
+│       ├── lib/      # Utilities (axios, firebase, socket, cloudinary)
+│       └── services/ # External services (analytics, fcm, digilocker)
+├── server/           # Express backend
+│   └── src/
+│       ├── config/   # DB, Firebase, Cloudinary, Socket.io
+│       ├── controllers/
+│       ├── jobs/     # Cron jobs (scoring, reminders, account deletion)
+│       ├── middleware/
+│       ├── models/
+│       ├── routes/
+│       ├── services/
+│       ├── templates/ # Email HTML templates
+│       └── utils/
+└── .github/workflows/ # CI/CD pipelines
 ```
 
-## Tech Stack
-
-### Client
-- **React** 18
-- **Vite** (bundler & dev server)
-- **Tailwind CSS** v3
-- **shadcn/ui** (component library)
-- **React Router** v6
-- **Redux Toolkit** (state management)
-- **Axios** (HTTP client)
-- **Socket.io Client** (real-time)
-
-### Server
-- **Node.js** 20
-- **Express.js** 4
-- **MongoDB** (database)
-- **Mongoose** 8 (ODM)
-- **Socket.io** (WebSockets)
-- **Firebase Admin SDK** (phone auth verification)
-- **Cloudinary** (file storage)
-- **JWT** (authentication)
-- **node-cron** (scheduled jobs)
-
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js 20+
-- npm or yarn
-- MongoDB Atlas account
-- Firebase project
-- Cloudinary account
+- MongoDB Atlas account (free M0 tier)
+- Firebase project (phone auth enabled)
+- Cloudinary account (free tier)
 
-### Installation
-
-```bash
-# Install client dependencies
-cd client && npm install
-
-# Install server dependencies
-cd ../server && npm install
-```
-
-### Environment Setup
-
-#### Server (`server/.env`)
-Create `.env` file in server directory with:
-```
-MONGODB_URI=mongodb+srv://...
-FIREBASE_PROJECT_ID=your-firebase-project
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
-JWT_ACCESS_SECRET=your-access-secret
-JWT_REFRESH_SECRET=your-refresh-secret
-PORT=5000
-CLIENT_URL=http://localhost:5173
-NODE_ENV=development
-```
-
-#### Client (`client/.env`)
-Create `.env` file in client directory with:
-```
-VITE_API_BASE_URL=http://localhost:5000/api/v1
-VITE_SOCKET_URL=http://localhost:5000
-VITE_FIREBASE_API_KEY=your-firebase-key
-VITE_FIREBASE_AUTH_DOMAIN=your-firebase-domain
-VITE_FIREBASE_PROJECT_ID=your-firebase-project
-VITE_FIREBASE_APP_ID=your-firebase-app-id
-```
-
-### Running the Project
+### 1. Clone the repository
 
 ```bash
-# Terminal 1: Start server
+git clone https://github.com/your-username/freiwilliger.git
+cd freiwilliger
+```
+
+### 2. Install dependencies
+
+```bash
+cd server && npm install
+cd ../client && npm install
+```
+
+### 3. Environment setup
+
+Copy the example env files and fill in your credentials:
+
+```bash
+cp server/.env.example server/.env
+cp client/.env.example client/.env
+```
+
+**Server .env requires:**
+- `MONGODB_URI` — MongoDB Atlas connection string
+- `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` — random 64-char hex strings
+- `CLOUDINARY_CLOUD_NAME` / `API_KEY` / `API_SECRET`
+- `FIREBASE_PROJECT_ID`
+- `EMAIL_USER` / `EMAIL_PASSWORD` — Gmail App Password
+
+**Client .env requires:**
+- `VITE_API_BASE_URL=http://localhost:5000/api/v1`
+- `VITE_SOCKET_URL=http://localhost:5000`
+- `VITE_FIREBASE_*` — Firebase web app config values
+
+### 4. Firebase Admin Key
+
+Download from Firebase Console → Service Accounts → Generate Private Key.
+Save as `server/firebase-admin-key.json` (never commit this file).
+
+### 5. Run development servers
+
+```bash
+# Terminal 1 — Backend
 cd server && npm run dev
 
-# Terminal 2: Start client
+# Terminal 2 — Frontend
 cd client && npm run dev
 ```
 
-Server runs on `http://localhost:5000`
-Client runs on `http://localhost:5173`
+Backend runs on http://localhost:5000
+Frontend runs on http://localhost:5173
 
-## Features
+### 6. Create an admin user
 
-- **User Authentication** — Email/password + Firebase phone OTP
-- **Event Discovery** — Location-based event feed with filtering
-- **Event Management** — Create, manage, and track event requirements
-- **Volunteer Profiles** — Showcase skills, experience, and ratings
-- **Real-time Messaging** — Direct messages and group event chats
-- **Scoring System** — Automated reputation tracking
-- **Network** — Build professional connections
-- **Contact Requests** — Secure contact information sharing
-- **Reviews & Ratings** — Community feedback system
-
-## API Documentation
-
-Base URL: `http://localhost:5000/api/v1`
-
-### Authentication
-- `POST /auth/phone` — Verify Firebase phone OTP
-- `POST /auth/register` — Complete registration
-- `POST /auth/login` — Username/password login
-- `POST /auth/refresh-token` — Refresh JWT
-- `POST /auth/logout` — Sign out
-
-### Users
-- `GET /users/me` — Get own profile
-- `PATCH /users/me` — Update profile
-- `GET /users/:username` — Get public profile
-- `GET /users/search?q=` — Search users
-
-### Events
-- `GET /events/feed` — Get nearby events
-- `POST /events` — Create event
-- `GET /events/:id` — Get event details
-- `POST /events/:id/apply` — Apply to event
-- `PATCH /events/:id/applicants/:userId` — Manage applicants
-
-### Messages
-- `GET /conversations` — List conversations
-- `POST /conversations` — Create conversation
-- `GET /conversations/:id/messages` — Get messages
-
-### Reviews
-- `POST /reviews` — Submit review
-- `GET /reviews/user/:userId` — Get user reviews
-
-## Development
-
-### Build
 ```bash
-# Client
+# In MongoDB Atlas or via mongosh:
+db.users.updateOne({ username: 'your-username' }, { $set: { role: 'admin' } })
+```
+
+## 🧪 Testing
+
+```bash
+# Server unit tests
+cd server && npm test
+
+# Client unit tests
+cd client && npm test
+
+# Client build check
 cd client && npm run build
 
-# Server uses nodemon for auto-restart
+# Lint
+cd server && npm run lint
+cd client && npm run lint
 ```
 
-### Testing
-```bash
-# Client
-npm run test
-
-# Server
-npm test
-```
-
-## Deployment
+## 🚢 Deployment
 
 ### Backend (Render.com)
-1. Connect GitHub repository
-2. Set environment variables
-3. Build: `npm install`
-4. Start: `node server.js`
+1. Connect GitHub repo → New Web Service
+2. Build: `cd server && npm install`
+3. Start: `cd server && node server.js`
+4. Add all env vars from server/.env
 
 ### Frontend (Vercel)
-1. Import GitHub repository
-2. Set environment variables
-3. Build: `npm run build`
-4. Output: `dist`
+1. Connect GitHub repo → Import Project
+2. Framework: Vite, Root: `client`
+3. Add client env vars (VITE_* prefixed)
 
-## Project Status
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed step-by-step deployment guide.
 
-**Phase 1 — Foundation** ✅
-- Project scaffolding
-- Database models
-- Authentication system
+## 📡 API Endpoints
 
-**Phase 2 — Core Features** 🚀
-- Event management
-- Real-time messaging
-- Scoring system
+See [API_DOCS.md](./API_DOCS.md) for full endpoint documentation.
 
-**Phase 3 — Polish**
-- PWA setup
-- Performance optimization
-- Mobile refinements
-
-## License
+## 📄 License
 
 MIT
 
-## Contact
+## 👥 Contributing
 
-For questions or support, contact: support@freiwilliger.in
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.

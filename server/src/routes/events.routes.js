@@ -2,13 +2,15 @@ const express = require("express");
 const { body, param, query } = require("express-validator");
 const { verifyToken } = require("../middleware/auth.middleware");
 const { requireOrganiser, requireVolunteer } = require("../middleware/role.middleware");
-const { getEventFeed, createEvent, markAttendance, getMyEventsVolunteer, getMyEventsOrganiser, getEventById } = require("../controllers/event.controller");
+const { getEventFeed, createEvent, markAttendance, getMyEventsVolunteer, getMyEventsOrganiser, getEventById, discoverByState } = require("../controllers/event.controller");
 const {
   applyToEvent,
   withdrawApplication,
   respondToApplicant,
   getApplicants,
 } = require("../controllers/application.controller");
+const { generateCheckinQR, validateCheckin } = require("../controllers/checkin.controller");
+const { downloadCertificate } = require("../controllers/certificate.controller");
 
 const router = express.Router();
 
@@ -75,6 +77,13 @@ router.get(
   verifyToken,
   requireOrganiser,
   getMyEventsOrganiser
+);
+
+// GET /events/discover - Discover events by state
+router.get(
+  "/discover",
+  verifyToken,
+  discoverByState
 );
 
 // GET /events/:id - Single event detail
@@ -145,6 +154,33 @@ router.post(
     body("attended").isBoolean().withMessage("Attended status must be a boolean."),
   ],
   markAttendance
+);
+
+// GET /events/:id/checkin-qr - Generate QR check-in token (Organiser only)
+router.get(
+  "/:id/checkin-qr",
+  verifyToken,
+  requireOrganiser,
+  [param("id").isMongoId().withMessage("Invalid event ID.")],
+  generateCheckinQR
+);
+
+// POST /events/:id/checkin - Validate QR check-in (Volunteer only)
+router.post(
+  "/:id/checkin",
+  verifyToken,
+  requireVolunteer,
+  [param("id").isMongoId().withMessage("Invalid event ID.")],
+  validateCheckin
+);
+
+// GET /events/:id/certificate - Download participation certificate (Volunteer only)
+router.get(
+  "/:id/certificate",
+  verifyToken,
+  requireVolunteer,
+  [param("id").isMongoId().withMessage("Invalid event ID.")],
+  downloadCertificate
 );
 
 module.exports = router;

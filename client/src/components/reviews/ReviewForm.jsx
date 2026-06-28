@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
+import * as analytics from '../../services/analytics';
 
 export function ReviewForm({ eventId, revieweeId, revieweeRole, reviewerRole, onSubmit, isSubmitting }) {
   const [stars, setStars] = useState(0);
@@ -24,6 +25,7 @@ export function ReviewForm({ eventId, revieweeId, revieweeRole, reviewerRole, on
         text: comment,
         noShow: isNoShow
       });
+      analytics.track('review_submitted', { eventId, stars });
       setSubmitted(true);
     } catch (error) {
       console.error('Failed to submit review', error);

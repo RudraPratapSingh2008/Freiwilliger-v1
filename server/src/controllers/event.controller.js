@@ -257,6 +257,39 @@ const getEventById = async (req, res) => {
   }
 };
 
+// GET /events/discover - Discover events by state (case-insensitive, paginated)
+const discoverByState = async (req, res) => {
+  try {
+    const { state, page = 1, limit = 20 } = req.query;
+    if (!state) {
+      return errorResponse(res, 'State parameter is required.', 400);
+    }
+
+    const query = {
+      'location.state': new RegExp(`^${state}$`, 'i'),
+      status: { $in: ['open', 'active'] },
+    };
+
+    const total = await Event.countDocuments(query);
+    const events = await Event.find(query)
+      .populate('organiserId', 'username profilePhotoUrl organiserProfile.companyName organiserProfile.fullName')
+      .skip((Number(page) - 1) * Number(limit))
+      .limit(Number(limit))
+      .sort({ createdAt: -1 });
+
+    return successResponse(res, {
+      events,
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPages: Math.ceil(total / Number(limit)),
+    }, 'Events discovered.');
+  } catch (error) {
+    console.error('Error discovering events by state:', error);
+    return errorResponse(res, error.message, 500);
+  }
+};
+
 module.exports = {
   getEventFeed,
   createEvent,
@@ -264,4 +297,5 @@ module.exports = {
   getMyEventsVolunteer,
   getMyEventsOrganiser,
   getEventById,
+  discoverByState,
 };

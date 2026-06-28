@@ -21,6 +21,7 @@ export const reviewsApi = createApi({
     },
   }),
   tagTypes: ["UserReviews", "EventReviews"],
+  keepUnusedDataFor: 120,
   endpoints: (builder) => ({
     getUserReviews: builder.query({
       query: (userId) => `/reviews/user/${userId}`,

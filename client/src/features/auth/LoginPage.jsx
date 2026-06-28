@@ -26,6 +26,7 @@ import {
   useLoginMutation 
 } from '../../api/authApi';
 import { setCredentials, setLoading, setError } from './authSlice';
+import * as analytics from '../../services/analytics';
 
 // UI Components - adjust imports based on your UI library
 // If using custom components, replace these with your own
@@ -268,6 +269,7 @@ export default function LoginPage() {
           user: response.user,
           accessToken: response.accessToken,
         }));
+        analytics.track('user_logged_in', { method: 'phone' });
         navigate('/dashboard');
       }
     } catch (err) {
@@ -296,6 +298,7 @@ export default function LoginPage() {
         user: response.user,
         accessToken: response.accessToken,
       }));
+      analytics.track('user_logged_in', { method: 'username' });
       navigate('/dashboard');
     } catch (err) {
       console.error('[Freiwilliger] Login error:', err);

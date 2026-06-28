@@ -20,6 +20,7 @@ import {
   useCompleteRegistrationMutation 
 } from '../../api/authApi';
 import { setCredentials, setLoading, setError } from './authSlice';
+import * as analytics from '../../services/analytics';
 
 // UI Components
 const Input = ({ className = '', ...props }) => (
@@ -262,6 +263,7 @@ export default function RegisterPage() {
           user: response.user,
           accessToken: response.accessToken,
         }));
+        analytics.track('user_logged_in', { method: 'phone' });
         navigate('/dashboard');
       } else {
         // New user, proceed to step 3
@@ -307,6 +309,7 @@ export default function RegisterPage() {
       // Clear stored token
       sessionStorage.removeItem('firebaseIdToken');
       
+      analytics.track('user_registered', { username });
       // Route exists in current app setup; keep user in authenticated area
       navigate('/dashboard');
     } catch (err) {

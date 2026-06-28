@@ -38,10 +38,25 @@ export const eventsApi = createApi({
 
     getFeed: builder.query({
       query: (filters) => buildFeedQueryString(filters),
+      keepUnusedDataFor: 60,
+      serializeQueryArgs: ({ queryArgs }) => {
+        const { page, ...rest } = queryArgs || {};
+        return JSON.stringify(rest); // Cache key ignores page
+      },
+      merge: (currentCache, newItems, { arg }) => {
+        if (!arg?.page || arg.page === 1) return newItems;
+        return {
+          ...newItems,
+          data: [...(currentCache?.data || []), ...(newItems?.data || [])],
+        };
+      },
+      forceRefetch: ({ currentArg, previousArg }) => {
+        return currentArg?.page !== previousArg?.page;
+      },
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map((event) => ({ type: "Event", id: event._id })),
+              ...(result.data || []).map((event) => ({ type: "Event", id: event._id })),
               { type: "Feed", id: "LIST" },
             ]
           : [{ type: "Feed", id: "LIST" }],
@@ -206,6 +221,24 @@ export const eventsApi = createApi({
         { type: "Event", id: eventId },
       ],
     }),
+
+    cancelEvent: builder.mutation({
+      query: (eventId) => ({
+        url: `/events/${eventId}`,
+        method: "PATCH",
+        body: { status: "cancelled" },
+      }),
+      invalidatesTags: (result, error, eventId) => [
+        { type: "Event", id: eventId },
+        { type: "MyEventsOrganiser", id: "LIST" },
+        { type: "Feed", id: "LIST" },
+      ],
+    }),
+
+    discoverByState: builder.query({
+      query: ({ state, page = 1, limit = 20 }) =>
+        `/events/discover?state=${encodeURIComponent(state)}&page=${page}&limit=${limit}`,
+    }),
   }),
 });
 
@@ -220,4 +253,6 @@ export const {
   useGetMyEventsVolunteerQuery,
   useGetMyEventsOrganiserQuery,
   useMarkAttendanceMutation,
+  useCancelEventMutation,
+  useDiscoverByStateQuery,
 } = eventsApi;
